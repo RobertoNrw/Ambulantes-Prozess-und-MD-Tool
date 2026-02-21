@@ -1,0 +1,1674 @@
+
+
+
+
+Teammitglieder einladen
+Du:
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VeRA-BI Ambulante Prozessanalyse + QPR-Audit (Enhanced)</title>
+
+  <!-- Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+      background:#f8fafc;
+      transition: background-color 0.3s ease;
+    }
+    body.dark-mode {
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    input, select, textarea, button { font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #1a73e8; outline-offset: -1px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
+
+    /* Dark mode scrollbar */
+    .dark-mode ::-webkit-scrollbar-track { background: #1e293b; }
+    .dark-mode ::-webkit-scrollbar-thumb { background: #475569; }
+    .dark-mode ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+    /* Pills / badges */
+    .qpr-badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; border:1px solid; }
+    .rating-pill { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; font-weight:800; font-size:13px; border:1px solid transparent; cursor:pointer; user-select:none; }
+    .rating-A { background:#dcfce7; color:#166534; border-color:#86efac; }
+    .rating-B { background:#fef3c7; color:#92400e; border-color:#fbbf24; }
+    .rating-C { background:#fed7aa; color:#9a3412; border-color:#fb923c; }
+    .rating-D { background:#fecaca; color:#991b1b; border-color:#f87171; }
+    
+    /* Toast Notifications */
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    .toast { 
+      background: #fff; 
+      border-radius: 12px; 
+      padding: 16px 20px; 
+      margin-bottom: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 300px;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .toast.success { border-left: 4px solid #16a34a; }
+    .toast.error { border-left: 4px solid #dc2626; }
+    .toast.info { border-left: 4px solid #1a73e8; }
+    .toast.warning { border-left: 4px solid #f59e0b; }
+
+    /* Search bar */
+    .search-bar {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+    }
+    .search-bar input {
+      width: 100%;
+      padding: 12px 14px 12px 40px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    .search-bar svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+    }
+
+    /* Modal */
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.50); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+    .modal-card { background:#fff; border-radius:20px; width:100%; max-width:720px; box-shadow: 0 30px 80px rgba(0,0,0,0.25); overflow:hidden; max-height: 90vh; display: flex; flex-direction: column; }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; padding:18px 24px; border-bottom:1px solid #e5e7eb; }
+    .modal-body { padding:24px; overflow-y: auto; flex: 1; }
+    .modal-foot { display:flex; justify-content:flex-end; gap:10px; padding:14px 24px; border-top:1px solid #e5e7eb; background:#f9fafb; }
+
+    /* Dark mode modal */
+    .dark-mode .modal-card { background: #1e293b; }
+    .dark-mode .modal-head { border-bottom-color: #334155; }
+    .dark-mode .modal-foot { background: #0f172a; border-top-color: #334155; }
+
+    /* Small helpers */
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .card { background:#fff; border-radius:14px; border:1px solid #e5e7eb; }
+    .dark-mode .card { background: #1e293b; border-color: #334155; }
+    
+    .btn { display:inline-flex; align-items:center; gap:8px; padding:12px 16px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; color:#374151; font-size:14px; font-weight:600; cursor:pointer; transition: all 0.2s ease; }
+    .btn:hover { background: #f9fafb; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { border:none; background:#1a73e8; color:#fff; }
+    .btn-primary:hover { background: #1557b0; }
+    .btn-danger { border:none; background:#ef4444; color:#fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-ghost { border:none; background:transparent; }
+    
+    .muted { color:#6b7280; }
+    .dark-mode .muted { color: #94a3b8; }
+    .small { font-size:12px; color:#9ca3af; }
+    .dark-mode .small { color: #64748b; }
+    
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    .grid3 { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; }
+    .grid4 { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; }
+    @media (max-width: 1100px) { .grid4 { grid-template-columns: repeat(2, 1fr); } .grid2 { grid-template-columns: 1fr; } }
+    @media (max-width: 680px) { .grid4 { grid-template-columns: 1fr; } }
+
+    /* Loading spinner */
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #1a73e8;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Keyboard shortcuts hint */
+    .kbd {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      color: #374151;
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      font-family: ui-monospace, monospace;
+    }
+    .dark-mode .kbd {
+      color: #e2e8f0;
+      background: #334155;
+      border-color: #475569;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <div id="toast-root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+    // =========================================================
+    // APP META
+    // =========================================================
+    const APP_VERSION = "4.1.0";
+    const APP_NAME = "VeRA-BI Ambulante Prozessanalyse + QPR-Audit (Enhanced)";
+    const TODAY = new Date().toISOString().slice(0,10);
+
+    // =========================================================
+    // ICONS (Lucide-ish)
+    // =========================================================
+    const Icon = ({ children, size=20, color="currentColor", ...props }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        {children}
+      </svg>
+    );
+
+    const Icons = {
+      Home: (p) => <Icon {...p}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>,
+      Users: (p) => <Icon {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>,
+      ClipboardList: (p) => <Icon {...p}><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></Icon>,
+      Code: (p) => <Icon {...p}><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></Icon>,
+      BarChart3: (p) => <Icon {...p}><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></Icon>,
+      Download: (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>,
+      Upload: (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></Icon>,
+      Plus: (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>,
+      X: (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>,
+      CheckCircle2: (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></Icon>,
+      AlertCircle: (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Icon>,
+      Search: (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>,
+      Trash2: (p) => <Icon {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></Icon>,
+      Edit3: (p) => <Icon {...p}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></Icon>,
+      Save: (p) => <Icon {...p}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></Icon>,
+      Shield: (p) => <Icon {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></Icon>,
+      Target: (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></Icon>,
+      FileText: (p) => <Icon {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></Icon>,
+      BookOpen: (p) => <Icon {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>,
+      ExternalLink: (p) => <Icon {...p}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></Icon>,
+      Moon: (p) => <Icon {...p}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></Icon>,
+      Sun: (p) => <Icon {...p}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></Icon>,
+      Filter: (p) => <Icon {...p}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></Icon>,
+      Printer: (p) => <Icon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></Icon>,
+      Check: (p) => <Icon {...p}><polyline points="20 6 9 17 4 12"/></Icon>,
+      Info: (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></Icon>,
+    };
+
+    // =========================================================
+    // DATA (same as v4.0.0)
+    // =========================================================
+    const ROLLEN = [
+      { id: 'PDL', label: 'PDL', color: '#1a73e8', desc: 'Pflegedienstleitung' },
+      { id: 'stvPDL', label: 'stv. PDL', color: '#7c3aed', desc: 'Stellv. Pflegedienstleitung' },
+      { id: 'PFK_LG', label: 'PFK / LG1+2', color: '#0d9488', desc: 'Pflegefachkraft / Leistungsgruppe' },
+      { id: 'Ungelernt', label: 'Ungelernt', color: '#ea580c', desc: 'Ungelernte Hilfskraft' },
+    ];
+    const QUALIFIKATIONEN = ['PFK (3-jÃ¤hrig)', 'LG1 (1-jÃ¤hrig)', 'LG1+LG2', 'Ungelernt', 'Betreuungskraft Â§43b'];
+    const REGIONEN = ['Stadt (urban)', 'Land (rural)', 'Gemischt', 'Bundeslandgrenze'];
+
+    const QPR_QB = {
+      QB1: { label: 'UnterstÃ¼tzung SelbstÃ¤ndigkeit', color: '#fff3cd', borderColor: '#ffc107', textColor: '#856404' },
+      QB2: { label: 'Vereinbarte Leistungen', color: '#d4edda', borderColor: '#28a745', textColor: '#155724' },
+      QB3: { label: 'Behandlungspflege', color: '#f8d7da', borderColor: '#dc3545', textColor: '#721c24' },
+      QB4: { label: 'Beratung & Schutz', color: '#e2e3e5', borderColor: '#6c757d', textColor: '#383d41' },
+      QB5: { label: 'Organisation & QM', color: '#cce5ff', borderColor: '#007bff', textColor: '#004085' },
+      Stress: { label: 'Arbeitsbelastung', color: '#f5c6cb', borderColor: '#e83e8c', textColor: '#6f1e51' },
+      Digi: { label: 'Digitalisierung', color: '#d1ecf1', borderColor: '#17a2b8', textColor: '#0c5460' },
+      Koop: { label: 'Kooperation', color: '#d4edda', borderColor: '#20c997', textColor: '#155724' },
+    };
+
+    const KATEGORIEN = [
+      { id: 'Problem', color: '#dc2626', bg: '#fef2f2', label: 'Problem', icon: Icons.AlertCircle },
+      { id: 'Erfolg', color: '#16a34a', bg: '#f0fdf4', label: 'Erfolg', icon: Icons.CheckCircle2 },
+      { id: 'Prozess', color: '#2563eb', bg: '#eff6ff', label: 'Prozessbeschreibung', icon: Icons.ClipboardList },
+      { id: 'Empfehlung', color: '#f59e0b', bg: '#fffbeb', label: 'Handlungsempfehlung', icon: Icons.Target },
+      { id: 'Neutral', color: '#6b7280', bg: '#f9fafb', label: 'Neutral/Info', icon: Icons.BookOpen },
+    ];
+
+    const LEITFADEN = [
+      { id: 'A01', block: 'A', qb: 'QB5', frage: 'Bitte beschreiben Sie Ihre Rolle, Qualifikation und typische Einsatzanteile (Tour vs. BÃ¼ro).', rollen: ['PDL','stvPDL','PFK_LG','Ungelernt'], pflicht: true },
+      { id: 'A02', block: 'A', qb: 'QB5', frage: 'Wie ist die aktuelle Personalsituation (Besetzbarkeit, Fluktuation, Krankheitsquote)?', rollen: ['PDL','stvPDL'], pflicht: true },
+      { id: 'A03', block: 'A', qb: 'QB5', frage: 'Wie lÃ¤uft die Einarbeitung bei neuen Mitarbeitenden ab?', rollen: ['PDL','stvPDL','PFK_LG'], pflicht: true },
+      { id: 'A05', block: 'A', qb: 'QB5', frage: 'Wie funktioniert das Ausfallmanagement bei kurzfristigen PersonalengpÃ¤ssen?', rollen: ['PDL','stvPDL'], pflicht: true },
+      { id: 'C01', block: 'C', qb: 'QB1', frage: 'Nutzen Sie eine digitale Tourenplanungssoftware?', rollen: ['PDL','stvPDL'], pflicht: true },
+      { id: 'C02', block: 'C', qb: 'QB1', frage: 'Wie realistisch sind Pflegezeit, Fahrzeit und Pausen in der Tourenplanung?', rollen: ['PDL','stvPDL','PFK_LG','Ungelernt'], pflicht: true },
+      { id: 'C03', block: 'C', qb: 'QB1', frage: 'Wie hÃ¤ufig gibt es VerspÃ¤tungen oder LeistungskÃ¼rzungen?', rollen: ['PFK_LG','Ungelernt'], pflicht: true },
+      { id: 'C05', block: 'C', qb: 'QB1', frage: 'Wie wird die KontinuitÃ¤t (gleiche Bezugspersonen) organisiert?', rollen: ['PDL','stvPDL','PFK_LG'], pflicht: true },
+      { id: 'D01', block: 'D', qb: 'QB1', frage: 'Mussten in den letzten 12 Monaten Leistungen komplett abgelehnt werden?', rollen: ['PDL','stvPDL'], pflicht: true },
+      { id: 'D02', block: 'D', qb: 'QB1', frage: 'Welche Teilleistungen werden am hÃ¤ufigsten abgelehnt?', rollen: ['PDL','stvPDL'], pflicht: true },
+      { id: 'D03', block: 'D', qb: 'QB1', frage: 'Gibt es EngpÃ¤sse bei der Versorgung zu bestimmten Zeiten?', rollen: ['PDL','stvPDL','PFK_LG'], pflicht: true },
+      { id: 'E01', block: 'E', qb: 'QB2', frage: 'Werden Leistungen von mehreren PflegebedÃ¼rftigen gemeinsam erbracht (Poolen)?', rollen: ['PDL','stvPDL'], pflicht: true },
+      { id: 'E02', block: 'E', qb: 'QB2', frage: 'Bei welchen Leistungsarten wird gepoolt?', rollen: ['PDL','stvPDL','PFK_LG'], pflicht: false },
+      { id: 'F01', block: 'F', qb: 'Digi', frage: 'Welche digitalen Arbeitshilfen werden im Pflegealltag eingesetzt?', rollen: ['PDL','stvPDL','PFK_LG'], pflicht: true },
+      { id: 'F02', block: 'F', qb: 'Digi', frage: 'Wie zufrieden sind Sie mit der digitalen Ausstattung (1-5)?', rollen: ['PDL','stvPDL','PFK_LG','Ungelernt'], pflicht: true },
+      { id: 'G01', block: 'G', qb: 'QB1', frage: 'Wie laufen Erstkontakt und Erstassessment ab?', rollen: ['PDL','stvPDL','PFK_LG'], pflicht: true },
+      { id: 'G02', block: 'G', qb: 'QB1', frage: 'Wie werden Risiken im Haushalt erkannt und dokumentiert?', rollen: ['PDL','stvPDL','PFK_LG'], pflicht: true },
+      { id: 'G03', block: 'G', qb: 'QB3', frage: 'Wie sicher fÃ¼hlen Sie sich bei Behandlungspflege im Haushalt?', rollen: ['PFK_LG'], pflicht: true },
+      { id: 'G04', block: 'G', qb: 'QB3', frage: 'Wo treten typische Risikostellen in der Behandlungspflege auf?', rollen: ['PDL','stvPDL','PFK_LG'], pflicht: true },
+      { id: 'G05', block: 'G', qb: 'QB4', frage: 'Wie gehen Sie bei Verdacht auf VernachlÃ¤ssigung/Gewalt vor?', rollen: ['PDL','stvPDL','PFK_LG','Ungelernt'], pflicht: true },
+      { id: 'G06', block: 'G', qb: 'QB5', frage: 'Welche 3 QualitÃ¤tsziele sind handlungsleitend?', rollen: ['PDL','stvPDL'], pflicht: true },
+      { id: 'H05', block: 'H', qb: 'QB4', frage: 'Wie lÃ¤uft die Zusammenarbeit mit AngehÃ¶rigen?', rollen: ['PDL','stvPDL','PFK_LG','Ungelernt'], pflicht: true },
+      { id: 'I01', block: 'I', qb: 'Stress', frage: 'Was sind Ihre 3 grÃ¶ÃŸten Stressoren im Arbeitsalltag?', rollen: ['PDL','stvPDL','PFK_LG','Ungelernt'], pflicht: true },
+      { id: 'I02', block: 'I', qb: 'Stress', frage: 'Wie hoch ist Ihr aktueller Stresslevel (1-6)?', rollen: ['PDL','stvPDL','PFK_LG','Ungelernt'], pflicht: true },
+    ];
+
+    const BLOECKE = {
+      A: { label: 'Personal', icon: Icons.Users, color: '#1a73e8' },
+      C: { label: 'Tourenplanung', icon: Icons.ClipboardList, color: '#0d9488' },
+      D: { label: 'Versorgungssicherheit', icon: Icons.AlertCircle, color: '#ea580c' },
+      E: { label: 'Poolen', icon: Icons.Target, color: '#16a34a' },
+      F: { label: 'Digitalisierung', icon: Icons.BarChart3, color: '#0891b2' },
+      G: { label: 'Prozesse & QualitÃ¤t', icon: Icons.CheckCircle2, color: '#dc2626' },
+      H: { label: 'Kooperation', icon: Icons.Users, color: '#8b5cf6' },
+      I: { label: 'Stress & Belastung', icon: Icons.BarChart3, color: '#ec4899' },
+    };
+
+    const BLOCK_ORDER = ["A","C","D","E","F","G","H","I"];
+
+    const CODEBUCH = [
+      { id: 'P01', ober: 'Personal', unter: 'Personalmangel', qb: 'QB5', keywords: ['personalmangel','unterbesetzt'] },
+      { id: 'T01', ober: 'Touren', unter: 'Zeitdruck', qb: 'QB1', keywords: ['zeitdruck','hetze'] },
+      { id: 'Q02', ober: 'Prozess', unter: 'Risikoerkennung', qb: 'QB1', keywords: ['risiko','sturz'] },
+      { id: 'Q04', ober: 'HKP', unter: 'Medikation', qb: 'QB3', keywords: ['medik','tablette'] },
+      { id: 'Q08', ober: 'Schutz', unter: 'Gewalt', qb: 'QB4', keywords: ['gewalt','misshandlung'] },
+      { id: 'S01', ober: 'Stress', unter: 'Zeitstress', qb: 'Stress', keywords: ['stress','druck'] },
+    ];
+
+    const QPR_ASPEKTE = {
+      "QB1.1": { qb:"QB1", label:"Aufnahmemanagement", bewertung:true, prÃ¼febene:"Person", evidenztypen:["Dokumentation","FachgesprÃ¤ch","Erstaufnahme-Protokoll"] },
+      "QB1.2": { qb:"QB1", label:"Risikenerkennung und Reaktion", bewertung:true, prÃ¼febene:"Person", evidenztypen:["Risikoassessment","FachgesprÃ¤ch","MaÃŸnahmenplan"] },
+      "QB1.3": { qb:"QB1", label:"Destabilisierung und Reaktion", bewertung:true, prÃ¼febene:"Person", evidenztypen:["FachgesprÃ¤ch","Verlaufsdokumentation","Arztbriefe"] },
+      "QB2.1": { qb:"QB2", label:"MobilitÃ¤t und Bewegung", bewertung:true, prÃ¼febene:"Person", evidenztypen:["Pflegedokumentation","FachgesprÃ¤ch","Beobachtung"] },
+      "QB2.5": { qb:"QB2", label:"KÃ¶rperpflege", bewertung:true, prÃ¼febene:"Person", evidenztypen:["Pflegedokumentation","FachgesprÃ¤ch","Beobachtung"] },
+      "QB2.8": { qb:"QB2", label:"Alltag und soziale Kontakte", bewertung:true, prÃ¼febene:"Person", evidenztypen:["Pflegedokumentation","FachgesprÃ¤ch"] },
+      "QB3.1": { qb:"QB3", label:"Behandlungspflege allgemein", bewertung:true, prÃ¼febene:"Person", evidenztypen:["HKP-Verordnung","Behandlungsdokumentation","FachgesprÃ¤ch"] },
+      "QB4.1": { qb:"QB4", label:"Zusammenarbeit mit AngehÃ¶rigen", bewertung:false, prÃ¼febene:"Person", evidenztypen:["FachgesprÃ¤ch","Beratungsdokumentation"] },
+      "QB4.2": { qb:"QB4", label:"Gewalt/VernachlÃ¤ssigung", bewertung:false, prÃ¼febene:"Person", evidenztypen:["FachgesprÃ¤ch","Schulungsnachweise","Eskalationsprotokolle"] },
+      "QB5.1": { qb:"QB5", label:"QualitÃ¤tsmanagement", bewertung:true, prÃ¼febene:"Einrichtung", evidenztypen:["QM-Handbuch","FachgesprÃ¤ch","Audit-Protokolle"] },
+      "QB5.2": { qb:"QB5", label:"Hygiene", bewertung:true, prÃ¼febene:"Einrichtung", evidenztypen:["Hygieneplan","Beobachtung","Schulungsnachweise"] },
+      "QB5.3": { qb:"QB5", label:"Qualifikation Fachkraft", bewertung:true, prÃ¼febene:"Einrichtung", evidenztypen:["Personalakte","FachgesprÃ¤ch","Stellenbeschreibung"] },
+    };
+
+    const IGES_ZU_QPR = {
+      "A01": { qprAspekt:"QB5.3", evidenztyp:"FachgesprÃ¤ch", gewichtung:0.3 },
+      "A02": { qprAspekt:"QB5.3", evidenztyp:"Dokumentation", gewichtung:0.5 },
+      "A03": { qprAspekt:"QB5.1", evidenztyp:"Prozess", gewichtung:0.4 },
+      "A05": { qprAspekt:"QB5.1", evidenztyp:"Prozess", gewichtung:0.3 },
+      "C01": { qprAspekt:"QB1.1", evidenztyp:"Dokumentation", gewichtung:0.2 },
+      "C02": { qprAspekt:"QB1.1", evidenztyp:"FachgesprÃ¤ch", gewichtung:0.6 },
+      "C03": { qprAspekt:"QB1.3", evidenztyp:"FachgesprÃ¤ch", gewichtung:0.7 },
+      "C05": { qprAspekt:"QB2.8", evidenztyp:"Prozess", gewichtung:0.5 },
+      "D01": { qprAspekt:"QB1.1", evidenztyp:"Statistik", gewichtung:0.8 },
+      "D02": { qprAspekt:"QB1.1", evidenztyp:"Statistik", gewichtung:0.6 },
+      "D03": { qprAspekt:"QB1.3", evidenztyp:"FachgesprÃ¤ch", gewichtung:0.5 },
+      "E01": { qprAspekt:"QB2.8", evidenztyp:"Prozess", gewichtung:0.4 },
+      "E02": { qprAspekt:"QB2.5", evidenztyp:"FachgesprÃ¤ch", gewichtung:0.3 },
+      "G01": { qprAspekt:"QB1.1", evidenztyp:"Prozess", gewichtung:0.9 },
+      "G02": { qprAspekt:"QB1.2", evidenztyp:"Prozess", gewichtung:1.0 },
+      "G03": { qprAspekt:"QB3.1", evidenztyp:"FachgesprÃ¤ch", gewichtung:0.8 },
+      "G04": { qprAspekt:"QB3.1", evidenztyp:"Risikoanalyse", gewichtung:0.9 },
+      "G05": { qprAspekt:"QB4.2", evidenztyp:"Prozess", gewichtung:1.0 },
+      "G06": { qprAspekt:"QB5.1", evidenztyp:"Dokumentation", gewichtung:0.8 },
+      "H05": { qprAspekt:"QB4.1", evidenztyp:"FachgesprÃ¤ch", gewichtung:0.7 },
+    };
+
+    const QPR_QB_STYLE = {
+      QB1: { label:'UnabhÃ¤ngig', color:'#fff3cd', borderColor:'#ffc107', textColor:'#856404' },
+      QB2: { label:'Vereinbarte Leistungen', color:'#d4edda', borderColor:'#28a745', textColor:'#155724' },
+      QB3: { label:'Behandlungspflege', color:'#f8d7da', borderColor:'#dc3545', textColor:'#721c24' },
+      QB4: { label:'Beratung', color:'#e2e3e5', borderColor:'#6c757d', textColor:'#383d41' },
+      QB5: { label:'Organisation', color:'#cce5ff', borderColor:'#007bff', textColor:'#004085' },
+    };
+
+    // =========================================================
+    // ENHANCED: Toast Notifications System
+    // =========================================================
+    const ToastContext = React.createContext();
+
+    const ToastProvider = ({ children }) => {
+      const [toasts, setToasts] = useState([]);
+
+      const addToast = useCallback((message, type = 'info') => {
+        const id = Math.random().toString(36).substr(2, 9);
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+          setToasts(prev => prev.filter(t => t.id !== id));
+        }, 4000);
+      }, []);
+
+      const removeToast = useCallback((id) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, []);
+
+      return (
+        <ToastContext.Provider value={{ addToast }}>
+          {children}
+          <div className="toast-container">
+            {toasts.map(toast => (
+              <div key={toast.id} className={toast ${toast.type}}>
+                {toast.type === 'success' && <Icons.CheckCircle2 size={20} color="#16a34a" />}
+                {toast.type === 'error' && <Icons.AlertCircle size={20} color="#dc2626" />}
+                {toast.type === 'info' && <Icons.Info size={20} color="#1a73e8" />}
+                {toast.type === 'warning' && <Icons.AlertCircle size={20} color="#f59e0b" />}
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{toast.message}</span>
+                <button onClick={() => removeToast(toast.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                  <Icons.X size={16} color="#9ca3af" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </ToastContext.Provider>
+      );
+    };
+
+    const useToast = () => {
+      const context = React.useContext(ToastContext);
+      if (!context) throw new Error('useToast must be used within ToastProvider');
+      return context;
+    };
+
+    // =========================================================
+    // STORAGE with Auto-Backup
+    // =========================================================
+    const Storage = {
+      get: (k, fallback) => {
+        try { return JSON.parse(localStorage.getItem(k) || JSON.stringify(fallback)); }
+        catch { return fallback; }
+      },
+      set: (k, v) => {
+        localStorage.setItem(k, JSON.stringify(v));
+        // Auto-backup every 5 minutes
+        Storage.createAutoBackup();
+      },
+      clearAll: () => {
+        ['vera-interviews','vera-codings','vera-auditcases','vera-einrichtungsaudit'].forEach(k => localStorage.removeItem(k));
+      },
+      createAutoBackup: () => {
+        const lastBackup = localStorage.getItem('vera-last-backup');
+        const now = Date.now();
+        if (!lastBackup || (now - parseInt(lastBackup)) > 300000) { // 5 minutes
+          const backup = {
+            timestamp: now,
+            interviews: Storage.get('vera-interviews', []),
+            codings: Storage.get('vera-codings', []),
+            auditCases: Storage.get('vera-auditcases', []),
+            einrichtungsAudit: Storage.get('vera-einrichtungsaudit', null),
+          };
+          localStorage.setItem('vera-auto-backup', JSON.stringify(backup));
+          localStorage.setItem('vera-last-backup', now.toString());
+        }
+      },
+      restoreBackup: () => {
+        const backup = localStorage.getItem('vera-auto-backup');
+        if (backup) {
+          const data = JSON.parse(backup);
+          return data;
+        }
+        return null;
+      }
+    };
+
+    // =========================================================
+    // HELPERS
+    // =========================================================
+    const uid = (prefix="ID") => ${prefix}_${Math.random().toString(16).slice(2,8)}_${Date.now().toString(16)};
+    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+    function sanitizeKey(str) {
+      return String(str ?? "")
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-zA-Z0-9_\-]/g, "_");
+    }
+
+    function stableEvidenceIdFromInterview(interviewId, frageId, qprAspekt, evidenztyp) {
+      return sanitizeKey(EVD_INT_${interviewId}_${frageId}_${qprAspekt}_${evidenztyp});
+    }
+
+    function stableEvidenceIdFromCoding(codingId, qprAspekt) {
+      return sanitizeKey(EVD_COD_${codingId}_${qprAspekt});
+    }
+
+    function nextInterviewId(interviews) {
+      const nums = (Array.isArray(interviews) ? interviews : [])
+        .map(i => String(i?.id ?? ""))
+        .map(id => (id.match(/^INT_(\d+)$/) || [])[1])
+        .filter(Boolean)
+        .map(n => parseInt(n, 10))
+        .filter(n => Number.isFinite(n));
+      const next = (nums.length ? Math.max(...nums) : 0) + 1;
+      return INT_${String(next).padStart(3, "0")};
+    }
+
+    function downloadText(filename, text) {
+      const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    // ENHANCED: Export to Excel
+    function exportToExcel(interviews, codings, auditCases, einrichtungsAudit) {
+      const wb = XLSX.utils.book_new();
+
+      // Interviews sheet
+      const interviewsData = interviews.map(i => ({
+        ID: i.id,
+        Rolle: ROLLEN.find(r => r.id === i.rolle)?.label,
+        Qualifikation: i.qualifikation,
+        Region: i.region,
+        Datum: i.datum,
+        Fortschritt: ${Object.keys(i.antworten || {}).length}/${LEITFADEN.filter(f => f.rollen.includes(i.rolle)).length},
+        Abgeschlossen: i.completed ? 'Ja' : 'Nein',
+        Notizen: i.notizen || ''
+      }));
+      const ws1 = XLSX.utils.json_to_sheet(interviewsData);
+      XLSX.utils.book_append_sheet(wb, ws1, "Interviews");
+
+      // Codings sheet
+      const codingsData = codings.map(c => ({
+        ID: c.id,
+        Interview: c.interviewId,
+        Frage: c.frageId,
+        Kategorie: c.kategorie,
+        QB: c.qb,
+        Code: c.codeId || '',
+        Text: c.text,
+        Datum: c.datum
+      }));
+      const ws2 = XLSX.utils.json_to_sheet(codingsData);
+      XLSX.utils.book_append_sheet(wb, ws2, "Codierungen");
+
+      // Audit Cases sheet
+      const auditData = auditCases.map(ac => ({
+        ID: ac.id,
+        Name: ac.name,
+        Pflegefachkraft: ac.pflegefach || '',
+        Datum: ac.datum,
+        'Anzahl Bewertungen': Object.values(ac.bewertungen || {}).filter(b => b.bewertung).length
+      }));
+      const ws3 = XLSX.utils.json_to_sheet(auditData);
+      XLSX.utils.book_append_sheet(wb, ws3, "QPR-FÃ¤lle");
+
+      XLSX.writeFile(wb, VeRA-BI_Export_${TODAY}.xlsx);
+    }
+
+    // =========================================================
+    // QPR: Evidence generation and scoring (same as v4.0.0)
+    // =========================================================
+    function generiereEvidenzAusInterview(interview, codings) {
+      const evidenzen = [];
+      const antworten = interview.antworten || {};
+      Object.entries(antworten).forEach(([frageId, antwort]) => {
+        const mapping = IGES_ZU_QPR[frageId];
+        if (!mapping) return;
+
+        const relatedCodings = (codings || []).filter(c => c.interviewId === interview.id && c.frageId === frageId);
+        const kategorie = relatedCodings.some(c => c.kategorie === "Problem") ? "Risiko" : "Neutral";
+
+        evidenzen.push({
+          id: stableEvidenceIdFromInterview(interview.id, frageId, mapping.qprAspekt, mapping.evidenztyp),
+          qprAspekt: mapping.qprAspekt,
+          typ: mapping.evidenztyp,
+          quelle: IGES-Interview ${interview.id}, Frage ${frageId},
+          inhalt: (antwort || "").trim(),
+          gewichtung: mapping.gewichtung,
+          kategorie,
+          datum: interview.datum || TODAY,
+          rolle: interview.rolle
+        });
+      });
+      return evidenzen;
+    }
+
+    function buildSuggestedEvidences(interviews, codings) {
+      const all = [];
+      (interviews || []).forEach(i => all.push(...generiereEvidenzAusInterview(i, codings)));
+      (codings || []).forEach(c => {
+        if (!c.text) return;
+        const qb = c.qb;
+        const fallbackAspekt = Object.keys(QPR_ASPEKTE).find(a => QPR_ASPEKTE[a].qb === qb && QPR_ASPEKTE[a].bewertung) || null;
+        if (!fallbackAspekt) return;
+        all.push({
+          id: stableEvidenceIdFromCoding(c.id, fallbackAspekt),
+          qprAspekt: fallbackAspekt,
+          typ: "Codierung",
+          quelle: Codierung ${c.id} (${c.kategorie}${c.codeId ?  / ${c.codeId} : ""}),
+          inhalt: c.text,
+          gewichtung: 0.35,
+          kategorie: c.kategorie === "Problem" ? "Risiko" : "Neutral",
+          datum: c.datum || TODAY,
+          rolle: c.rolle || null
+        });
+      });
+      return all;
+    }
+
+    function berechneEvidenzAbdeckung(auditCases) {
+      const alleAspekte = Object.keys(QPR_ASPEKTE).filter(k => QPR_ASPEKTE[k].bewertung);
+      const abgedeckte = new Set();
+      (auditCases || []).forEach(acase => {
+        Object.entries(acase.bewertungen || {}).forEach(([aspekt, bew]) => {
+          if (bew?.evidenzen?.length >= 2) abgedeckte.add(aspekt);
+        });
+      });
+      return alleAspekte.length === 0 ? 0 : Math.round((abgedeckte.size / alleAspekte.length) * 100);
+    }
+
+    function berechneRisikoVerteilung(auditCases) {
+      let cCount = 0, dCount = 0;
+      (auditCases || []).forEach(acase => {
+        Object.values(acase.bewertungen || {}).forEach(bew => {
+          if (bew?.bewertung === "C") cCount++;
+          if (bew?.bewertung === "D") dCount++;
+        });
+      });
+      const penalty = (cCount * 5) + (dCount * 20);
+      return Math.max(0, 100 - penalty);
+    }
+
+    function berechneFachgespraechsQuote(auditCases) {
+      let fg = 0, total = 0;
+      (auditCases || []).forEach(acase => {
+        Object.values(acase.bewertungen || {}).forEach(bew => {
+          const ev = bew?.evidenzen || [];
+          total += ev.length;
+          fg += ev.filter(e => e.typ === "FachgesprÃ¤ch").length;
+        });
+      });
+      const ratio = total === 0 ? 0 : (fg / total);
+      return Math.min(100, Math.round((ratio / 0.4) * 100));
+    }
+
+    function berechneEinrichtungsScore(einrichtungsAudit) {
+      if (!einrichtungsAudit?.bewertungen) return 50;
+      const vals = Object.values(einrichtungsAudit.bewertungen);
+      if (vals.length === 0) return 50;
+      const scores = { A:100, B:75, C:40, D:0 };
+      const total = vals.reduce((s, b) => s + (scores[b?.bewertung] ?? 50), 0);
+      return Math.round(total / vals.length);
+    }
+
+    function berechneAuditReadiness(auditCases, einrichtungsAudit) {
+      const EA = berechneEvidenzAbdeckung(auditCases);
+      const RV = berechneRisikoVerteilung(auditCases);
+      const FQ = berechneFachgespraechsQuote(auditCases);
+      const ES = berechneEinrichtungsScore(einrichtungsAudit);
+      const gesamt = (EA*0.3) + (RV*0.4) + (FQ*0.2) + (ES*0.1);
+      return { evidenzAbdeckung: EA, risikoVerteilung: RV, fachgespraechsQuote: FQ, einrichtungsScore: ES, gesamt: Math.round(gesamt) };
+    }
+
+    function getReadinessKategorie(score) {
+      if (score >= 85) return { label: "Audit-Ready", color: "#16a34a", className: "readiness-high" };
+      if (score >= 70) return { label: "Weitgehend bereit", color: "#f59e0b", className: "readiness-medium" };
+      if (score >= 50) return { label: "Handlungsbedarf", color: "#ea580c", className: "readiness-low" };
+      return { label: "Kritisch", color: "#dc2626", className: "readiness-critical" };
+    }
+
+    function normalizeAuditCases(auditCases) {
+      const aspektKeys = Object.keys(QPR_ASPEKTE || {}).filter(a => QPR_ASPEKTE[a]?.bewertung);
+      const cases = Array.isArray(auditCases) ? auditCases : [];
+      return cases.map(c => {
+        const bewertungen = { ...(c?.bewertungen || {}) };
+        aspektKeys.forEach(a => {
+          if (!bewertungen[a]) bewertungen[a] = { bewertung: "", evidenzen: [] };
+          if (!Array.isArray(bewertungen[a].evidenzen)) bewertungen[a].evidenzen = [];
+          if (typeof bewertungen[a].bewertung !== "string") bewertungen[a].bewertung = String(bewertungen[a].bewertung ?? "");
+        });
+        return { ...c, bewertungen };
+      });
+    }
+
+    function normalizeState(state) {
+      const s = state && typeof state === "object" ? state : {};
+      return {
+        ...s,
+        interviews: Array.isArray(s.interviews) ? s.interviews : [],
+        codings: Array.isArray(s.codings) ? s.codings : [],
+        auditCases: normalizeAuditCases(s.auditCases),
+        einrichtungsAudit: s.einrichtungsAudit || null,
+      };
+    }
+
+    // =========================================================
+    // PLOTLY COMPONENT
+    // =========================================================
+    const PlotlyChart = ({ data, layout, config, style={} }) => {
+      const ref = useRef(null);
+
+      const layoutWithDefaults = useMemo(() => ({
+        ...layout,
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: { family: 'Inter, system-ui, sans-serif', color: '#374151', size: 12 },
+        margin: layout?.margin ?? { t: 40, r: 20, b: 40, l: 40 },
+      }), [layout]);
+
+      const chartConfig = useMemo(() => config || { responsive: true, displayModeBar: false }, [config]);
+
+      useEffect(() => {
+        if (!ref.current) return;
+        Plotly.react(ref.current, data, layoutWithDefaults, chartConfig);
+        return () => Plotly.purge(ref.current);
+      }, [data, layoutWithDefaults, chartConfig]);
+
+      return <div ref={ref} style={{ width:'100%', height:'100%', minHeight:240, ...style }} />;
+    };
+
+    // =========================================================
+    // UI: Common components
+    // =========================================================
+    const StatCard = ({ label, value, sub, color, icon }) => {
+      const I = icon;
+      return (
+        <div className="card" style={{ padding:20 }}>
+          <div style={{ width:44, height:44, borderRadius:12, background:${color}12, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14 }}>
+            <I size={22} color={color} />
+          </div>
+          <div style={{ fontSize:30, fontWeight:800, color:'#111827' }}>{value}</div>
+          <div style={{ fontSize:14, color:'#6b7280' }}>{label}</div>
+          {sub ? <div className="small" style={{ marginTop:4 }}>{sub}</div> : null}
+        </div>
+      );
+    };
+
+    const Pill = ({ qb }) => {
+      const s = QPR_QB[qb] || QPR_QB_STYLE[qb];
+      if (!s) return null;
+      return (
+        <span className="qpr-badge" style={{ background:s.color, borderColor:s.borderColor, color:s.textColor }}>
+          {qb}
+        </span>
+      );
+    };
+
+    const EmptyState = ({ icon, title, text, actionLabel, onAction }) => {
+      const I = icon;
+      return (
+        <div className="card" style={{ textAlign:'center', padding:80, paddingTop:70 }}>
+          <I size={56} color="#d1d5db" style={{ marginBottom:20 }} />
+          <h3 style={{ fontSize:20, fontWeight:700, color:'#111827', marginBottom:10 }}>{title}</h3>
+          <p className="muted" style={{ marginBottom:24 }}>{text}</p>
+          {actionLabel ? (
+            <button className="btn btn-primary" onClick={onAction}><Icons.Plus size={18}/> {actionLabel}</button>
+          ) : null}
+        </div>
+      );
+    };
+
+    // ENHANCED: SearchBar Component
+    const SearchBar = ({ value, onChange, placeholder = "Suchen..." }) => {
+      return (
+        <div className="search-bar">
+          <Icons.Search size={18} />
+          <input
+            type="text"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder={placeholder}
+          />
+        </div>
+      );
+    };
+
+    // =========================================================
+    // SIDEBAR
+    // =========================================================
+    const Sidebar = ({ currentModule, setCurrentModule, counts, darkMode, toggleDarkMode }) => {
+      const modules = [
+        { id:'dashboard', label:'Dashboard', icon: Icons.Home },
+        { id:'interviews', label:'Interviews', icon: Icons.Users, count: counts.interviews },
+        { id:'leitfaden', label:'Leitfaden', icon: Icons.ClipboardList },
+        { id:'codierung', label:'Codierung', icon: Icons.Code, count: counts.codings },
+        { id:'qpr-cases', label:'QPR-Audit-FÃ¤lle', icon: Icons.Shield, count: counts.auditCases },
+        { id:'readiness', label:'Audit-Readiness', icon: Icons.Target },
+        { id:'auswertung', label:'Auswertung', icon: Icons.BarChart3 },
+        { id:'export', label:'Import/Export', icon: Icons.Download },
+        { id:'info', label:'Grundlagen', icon: Icons.BookOpen },
+      ];
+
+      return (
+        <div style={{
+          width:260, background: darkMode ? '#1e293b' : '#fff', 
+          borderRight: 1px solid ${darkMode ? '#334155' : '#e5e7eb'},
+          display:'flex', flexDirection:'column', height:'100vh', position:'fixed',
+          boxShadow:'2px 0 12px rgba(0,0,0,0.04)', zIndex:100
+        }}>
+          <div style={{ padding:'20px 24px', borderBottom: 1px solid ${darkMode ? '#334155' : '#e5e7eb'} }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{
+                width:42, height:42, borderRadius:10,
+                background:'linear-gradient(135deg, #1a73e8 0%, #0d9488 100%)',
+                display:'flex', alignItems:'center', justifyContent:'center', color:'#fff',
+                fontWeight:800, fontSize:14
+              }}>VeRA</div>
+              <div>
+                <div style={{ fontWeight:800, fontSize:15, color: darkMode ? '#e2e8f0' : '#111827' }}>Ambulant</div>
+                <div className="small">Enhanced v{APP_VERSION}</div>
+              </div>
+            </div>
+          </div>
+
+          <nav style={{ flex:1, padding:'12px 8px', overflowY:'auto' }}>
+            {modules.map(m => {
+              const I = m.icon;
+              const active = currentModule === m.id;
+              return (
+                <button key={m.id} onClick={() => setCurrentModule(m.id)}
+                  style={{
+                    width:'100%', textAlign:'left', display:'flex', alignItems:'center', gap:12,
+                    padding:'12px 16px', borderRadius:10, border:'none', marginBottom:4,
+                    background: active ? '#e8f0fe' : 'transparent', 
+                    color: active ? '#1a73e8' : (darkMode ? '#94a3b8' : '#6b7280'),
+                    fontWeight: active ? 700 : 500, cursor:'pointer', fontSize:14,
+                    transition: 'all 0.2s ease'
+                  }}>
+                  <I size={20} />
+                  <span style={{ flex:1 }}>{m.label}</span>
+                  {m.count !== undefined ? (
+                    <span style={{
+                      background: active ? '#1a73e8' : (darkMode ? '#334155' : '#e5e7eb'), 
+                      color: active ? '#fff' : (darkMode ? '#94a3b8' : '#6b7280'),
+                      borderRadius:12, padding:'2px 8px', fontSize:11, fontWeight:700
+                    }}>{m.count}</span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div style={{ padding:'12px 16px', borderTop: 1px solid ${darkMode ? '#334155' : '#e5e7eb'} }}>
+            <button 
+              className="btn" 
+              onClick={toggleDarkMode}
+              style={{ width: '100%', justifyContent: 'center', marginBottom: 12 }}
+            >
+              {darkMode ? <Icons.Sun size={18} /> : <Icons.Moon size={18} />}
+              {darkMode ? 'Hell' : 'Dunkel'}
+            </button>
+            <div style={{ fontSize:11, color:'#9ca3af', textAlign: 'center' }}>
+              Â© 2024 VeRA-BI Enhanced
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // =========================================================
+    // DASHBOARD (Enhanced with keyboard shortcuts info)
+    // =========================================================
+    const Dashboard = ({ interviews, codings, auditCases, einrichtungsAudit, setCurrentModule }) => {
+      const readiness = berechneAuditReadiness(auditCases, einrichtungsAudit);
+      const kat = readiness ? getReadinessKategorie(readiness.gesamt) : null;
+
+      return (
+        <div style={{ padding:32, maxWidth:1400 }}>
+          <div style={{ marginBottom:18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ fontSize:26, fontWeight:800, color:'#111827', marginBottom:6 }}>Dashboard</h1>
+              <p className="muted">Ãœbersicht aller laufenden Analysen und Audits</p>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <div className="small">
+                <span className="kbd">Ctrl</span> + <span className="kbd">S</span> Auto-Save aktiviert
+              </div>
+            </div>
+          </div>
+
+          <div className="grid4" style={{ marginBottom:18 }}>
+            <StatCard label="Interviews" value={interviews.length} sub={${interviews.filter(i=>i.completed).length} abgeschlossen} color="#1a73e8" icon={Icons.Users} />
+            <StatCard label="Codierungen" value={codings.length} sub="Qualitative Auswertung" color="#0d9488" icon={Icons.Code} />
+            <StatCard label="QPR Audit-FÃ¤lle" value={auditCases.length} sub="In Bearbeitung" color="#7c3aed" icon={Icons.Shield} />
+            {readiness && <StatCard label="Audit-Readiness" value={${readiness.gesamt}%} sub={kat.label} color={kat.color} icon={Icons.Target} />}
+          </div>
+
+          <div className="grid2">
+            <div className="card" style={{ padding:20 }}>
+              <h3 style={{ fontSize:16, fontWeight:800, color:'#111827', marginBottom:14 }}>Schnellzugriff</h3>
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                <button className="btn" onClick={() => setCurrentModule('interviews')} style={{ justifyContent:'flex-start' }}>
+                  <Icons.Users size={18}/> Interviews verwalten
+                </button>
+                <button className="btn" onClick={() => setCurrentModule('leitfaden')} style={{ justifyContent:'flex-start' }}>
+                  <Icons.ClipboardList size={18}/> Leitfaden durchfÃ¼hren
+                </button>
+                <button className="btn" onClick={() => setCurrentModule('qpr-cases')} style={{ justifyContent:'flex-start' }}>
+                  <Icons.Shield size={18}/> QPR-FÃ¤lle bearbeiten
+                </button>
+                <button className="btn" onClick={() => setCurrentModule('readiness')} style={{ justifyContent:'flex-start' }}>
+                  <Icons.Target size={18}/> Readiness prÃ¼fen
+                </button>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding:20 }}>
+              <h3 style={{ fontSize:16, fontWeight:800, color:'#111827', marginBottom:14 }}>Status & Neuerungen</h3>
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                <div>
+                  <div className="small" style={{ marginBottom:4 }}>Interviews</div>
+                  <div style={{ height:8, background:'#e5e7eb', borderRadius:4, overflow:'hidden' }}>
+                    <div style={{ height:'100%', width:${interviews.length ? (interviews.filter(i=>i.completed).length / interviews.length * 100) : 0}%, background:'#16a34a', borderRadius:4 }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="small" style={{ marginBottom:4 }}>QPR Evidenz-Abdeckung</div>
+                  <div style={{ height:8, background:'#e5e7eb', borderRadius:4, overflow:'hidden' }}>
+                    <div style={{ height:'100%', width:${readiness?.evidenzAbdeckung || 0}%, background:'#1a73e8', borderRadius:4 }} />
+                  </div>
+                </div>
+                <div className="card" style={{ padding: 12, background: '#eff6ff', border: '1px solid #bfdbfe', marginTop: 8 }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <Icons.Info size={18} color="#1a73e8" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div className="small" style={{ lineHeight: 1.6 }}>
+                      <strong>v4.1.0 Neu:</strong> Excel-Export, Dark Mode, Auto-Backup, Toast-Benachrichtigungen, erweiterte Suchfunktionen
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Note: The remaining modules (Interview, Leitfaden, Codierung, etc.) would be enhanced similarly
+    // For brevity, I'm including a simplified version marker here
+    // The full implementation would add search bars, filters, and improved UX to each module
+
+    // =========================================================
+    // INTERVIEW MODULE (Enhanced with Search)
+    // =========================================================
+    const InterviewModule = ({ interviews, setInterviews }) => {
+      const [showForm, setShowForm] = useState(false);
+      const [editId, setEditId] = useState(null);
+      const [form, setForm] = useState({ rolle:'PDL', qualifikation:'PFK (3-jÃ¤hrig)', region:'Stadt (urban)', datum:TODAY, notizen:'' });
+      const [searchTerm, setSearchTerm] = useState('');
+      const { addToast } = useToast();
+
+      const filteredInterviews = useMemo(() => {
+        if (!searchTerm) return interviews;
+        const term = searchTerm.toLowerCase();
+        return interviews.filter(i => 
+          i.id.toLowerCase().includes(term) ||
+          (ROLLEN.find(r => r.id === i.rolle)?.label || '').toLowerCase().includes(term) ||
+          i.region.toLowerCase().includes(term) ||
+          (i.notizen || '').toLowerCase().includes(term)
+        );
+      }, [interviews, searchTerm]);
+
+      function openNew() { setEditId(null); setForm({ rolle:'PDL', qualifikation:'PFK (3-jÃ¤hrig)', region:'Stadt (urban)', datum:TODAY, notizen:'' }); setShowForm(true); }
+      function openEdit(it) { setEditId(it.id); setForm({ rolle:it.rolle, qualifikation:it.qualifikation, region:it.region, datum:it.datum||TODAY, notizen:it.notizen||'' }); setShowForm(true); }
+
+      function save() {
+        if (editId) {
+          setInterviews(interviews.map(i => i.id === editId ? { ...i, ...form } : i));
+          addToast('Interview aktualisiert', 'success');
+        } else {
+          const newId = nextInterviewId(interviews);
+          setInterviews([...interviews, { id:newId, ...form, antworten:{}, completed:false }]);
+          addToast(Interview ${newId} erstellt, 'success');
+        }
+        setShowForm(false);
+      }
+
+      return (
+        <div style={{ padding:32, maxWidth:1400 }}>
+          <div style={{ marginBottom:18, display:'flex', justifyContent:'space-between', alignItems:'center', gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <h1 style={{ fontSize:26, fontWeight:800, color:'#111827', marginBottom:6 }}>Interviews</h1>
+              <p className="muted">Erstelle und verwalte Interview-Sitzungen</p>
+            </div>
+            <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Interviews durchsuchen..." />
+            <button className="btn btn-primary" onClick={openNew}><Icons.Plus size={18}/> Interview anlegen</button>
+          </div>
+
+          {showForm && (
+            <div className="modal-backdrop" onClick={() => setShowForm(false)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-head">
+                  <h2 style={{ fontSize:18, fontWeight:800, color:'#111827' }}>{editId ? "Interview bearbeiten" : "Neues Interview"}</h2>
+                  <button className="btn btn-ghost" onClick={() => setShowForm(false)}><Icons.X size={22} color="#9ca3af"/></button>
+                </div>
+                <div className="modal-body">
+                  <div className="grid2">
+                    <div>
+                      <label className="small" style={{ display:'block', marginBottom:6, fontWeight:800 }}>Rolle</label>
+                      <select value={form.rolle} onChange={e => setForm({ ...form, rolle:e.target.value })}
+                        style={{ width:'100%', padding:'12px 14px', border:'1px solid #d1d5db', borderRadius:10, fontSize:14 }}>
+                        {ROLLEN.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="small" style={{ display:'block', marginBottom:6, fontWeight:800 }}>Qualifikation</label>
+                      <select value={form.qualifikation} onChange={e => setForm({ ...form, qualifikation:e.target.value })}
+                        style={{ width:'100%', padding:'12px 14px', border:'1px solid #d1d5db', borderRadius:10, fontSize:14 }}>
+                        {QUALIFIKATIONEN.map(q => <option key={q} value={q}>{q}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="small" style={{ display:'block', marginBottom:6, fontWeight:800 }}>Region</label>
+                      <select value={form.region} onChange={e => setForm({ ...form, region:e.target.value })}
+                        style={{ width:'100%', padding:'12px 14px', border:'1px solid #d1d5db', borderRadius:10, fontSize:14 }}>
+                        {REGIONEN.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="small" style={{ display:'block', marginBottom:6, fontWeight:800 }}>Datum</label>
+                      <input type="date" value={form.datum} onChange={e => setForm({ ...form, datum:e.target.value })}
+                        style={{ width:'100%', padding:'12px 14px', border:'1px solid #d1d5db', borderRadius:10, fontSize:14 }}/>
+                    </div>
+                  </div>
+                  <div style={{ marginTop:16 }}>
+                    <label className="small" style={{ display:'block', marginBottom:6, fontWeight:800 }}>Notizen (optional)</label>
+                    <textarea value={form.notizen} onChange={e => setForm({ ...form, notizen:e.target.value })}
+                      placeholder="z.B. Besonderheiten, Rahmenbedingungen"
+                      style={{ width:'100%', padding:'12px 14px', border:'1px solid #d1d5db', borderRadius:10, fontSize:14, minHeight:80 }}/>
+                  </div>
+                </div>
+                <div className="modal-foot">
+                  <button className="btn" onClick={() => setShowForm(false)}>Abbrechen</button>
+                  <button className="btn btn-primary" onClick={save}><Icons.Save size={18}/> Speichern</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {filteredInterviews.length === 0 && searchTerm ? (
+            <div className="card" style={{ padding:40, textAlign:'center' }}>
+              <Icons.Search size={56} color="#d1d5db" style={{ marginBottom:20 }} />
+              <h3 style={{ fontSize:20, fontWeight:700, color:'#111827', marginBottom:10 }}>Keine Ergebnisse</h3>
+              <p className="muted">Keine Interviews gefunden fÃ¼r "{searchTerm}"</p>
+            </div>
+          ) : filteredInterviews.length === 0 ? (
+            <EmptyState icon={Icons.Users} title="Keine Interviews" text="Lege das erste Interview an, um zu starten." actionLabel="Interview anlegen" onAction={openNew} />
+          ) : (
+            <div className="grid3">
+              {filteredInterviews.map(it => {
+                const rolle = ROLLEN.find(r => r.id === it.rolle);
+                const relevantFragen = LEITFADEN.filter(f => f.rollen.includes(it.rolle));
+                const answered = Object.keys(it.antworten || {}).filter(k => (it.antworten[k]||"").trim().length > 0).length;
+                const pct = relevantFragen.length ? Math.round((answered / relevantFragen.length) * 100) : 0;
+                return (
+                  <div key={it.id} className="card" style={{ overflow:'hidden', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 20px', borderBottom:'1px solid #e5e7eb', background:'#fafafa' }}>
+                      <span className="mono" style={{ fontWeight:800, fontSize:15, color:'#111827' }}>{it.id}</span>
+                      <span style={{ padding:'5px 14px', borderRadius:20, fontSize:12, fontWeight:800, color:'#fff', background: rolle?.color }}>{rolle?.label}</span>
+                    </div>
+                    <div style={{ padding:20 }}>
+                      <div className="small" style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:14 }}>
+                        <span>ðŸ“… {it.datum || TODAY}</span>
+                        <span>â€¢ {it.qualifikation}</span>
+                        <span>â€¢ {it.region}</span>
+                      </div>
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                          <span className="small">Fortschritt</span>
+                          <span className="small" style={{ fontWeight:800, color:'#111827' }}>{pct}%</span>
+                        </div>
+                        <div style={{ height:8, background:'#e5e7eb', borderRadius:4, overflow:'hidden' }}>
+                          <div style={{ height:'100%', width:${pct}%, borderRadius:4, background: it.completed ? '#16a34a' : '#1a73e8' }} />
+                        </div>
+                      </div>
+
+                      {it.notizen ? <div className="small" style={{ marginTop:10 }}>{it.notizen}</div> : null}
+                    </div>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 20px', borderTop:'1px solid #e5e7eb', background:'#fafafa' }}>
+                      <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, color: it.completed ? '#16a34a' : '#9ca3af', fontWeight:700 }}>
+                        {it.completed ? <><Icons.CheckCircle2 size={16}/> Fertig</> : <><Icons.AlertCircle size={16}/> Offen</>}
+                      </span>
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button className="btn" onClick={() => openEdit(it)} title="Bearbeiten"><Icons.Edit3 size={16}/></button>
+                        <button className="btn" onClick={() => {
+                          if (confirm(Interview ${it.id} lÃ¶schen?)) {
+                            setInterviews(interviews.filter(x => x.id !== it.id));
+                            addToast(Interview ${it.id} gelÃ¶scht, 'info');
+                          }
+                        }} title="LÃ¶schen" style={{ background:'#fef2f2', borderColor:'#fecaca', color:'#ef4444' }}><Icons.Trash2 size={16}/></button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // Note: For the complete implementation, all other modules would be similarly enhanced
+    // Due to length constraints, I'm providing the framework and key enhancements
+
+    // Export Module with Excel Support
+    const ExportModule = ({ interviews, codings, auditCases, einrichtungsAudit, setInterviews, setCodings, setAuditCases, setEinrichtungsAudit }) => {
+      const { addToast } = useToast();
+
+      function exportAll() {
+        const data = { interviews, codings, auditCases, einrichtungsAudit };
+        downloadText(VeRA-BI_Export_${TODAY}.json, JSON.stringify(data, null, 2));
+        addToast('JSON Export erfolgreich', 'success');
+      }
+
+      function exportExcel() {
+        try {
+          exportToExcel(interviews, codings, auditCases, einrichtungsAudit);
+          addToast('Excel Export erfolgreich', 'success');
+        } catch (err) {
+          addToast('Excel Export fehlgeschlagen: ' + err.message, 'error');
+        }
+      }
+
+      function importAll(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const data = JSON.parse(ev.target.result);
+            const normalized = normalizeState(data);
+            setInterviews(normalized.interviews);
+            setCodings(normalized.codings);
+            setAuditCases(normalized.auditCases);
+            setEinrichtungsAudit(normalized.einrichtungsAudit);
+            addToast('Import erfolgreich!', 'success');
+          } catch (err) {
+            addToast('Import fehlgeschlagen: ' + err.message, 'error');
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function restoreFromBackup() {
+        const backup = Storage.restoreBackup();
+        if (backup) {
+          const normalized = normalizeState(backup);
+          setInterviews(normalized.interviews);
+          setCodings(normalized.codings);
+          setAuditCases(normalized.auditCases);
+          setEinrichtungsAudit(normalized.einrichtungsAudit);
+          const date = new Date(backup.timestamp);
+          addToast(Backup wiederhergestellt von ${date.toLocaleString('de-DE')}, 'success');
+        } else {
+          addToast('Kein Backup gefunden', 'warning');
+        }
+      }
+
+      function clearAll() {
+        if (confirm("Wirklich alle Daten lÃ¶schen?")) {
+          Storage.clearAll();
+          setInterviews([]);
+          setCodings([]);
+          setAuditCases([]);
+          setEinrichtungsAudit(null);
+          addToast('Alle Daten gelÃ¶scht', 'info');
+        }
+      }
+
+      return (
+        <div style={{ padding:32, maxWidth:1400 }}>
+          <div style={{ marginBottom:18 }}>
+            <h1 style={{ fontSize:26, fontWeight:800, color:'#111827', marginBottom:6 }}>Import / Export</h1>
+            <p className="muted">Datensicherung und Wiederherstellung</p>
+          </div>
+
+          <div className="grid2">
+            <div className="card" style={{ padding:20 }}>
+              <h3 style={{ fontSize:16, fontWeight:800, color:'#111827', marginBottom:12 }}>Export</h3>
+              <p className="small" style={{ marginBottom:14 }}>Sichere alle Daten als JSON oder Excel-Datei.</p>
+              <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
+                <button className="btn btn-primary" onClick={exportAll}><Icons.Download size={18}/> JSON exportieren</button>
+                <button className="btn btn-primary" onClick={exportExcel}><Icons.Download size={18}/> Excel exportieren</button>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding:20 }}>
+              <h3 style={{ fontSize:16, fontWeight:800, color:'#111827', marginBottom:12 }}>Import</h3>
+              <p className="small" style={{ marginBottom:14 }}>Lade eine zuvor exportierte JSON-Datei.</p>
+              <input type="file" accept=".json" onChange={importAll} style={{ display:'none' }} id="import-file"/>
+              <label htmlFor="import-file" className="btn btn-primary" style={{ cursor:'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <Icons.Upload size={18}/> JSON importieren
+              </label>
+            </div>
+
+            <div className="card" style={{ padding:20 }}>
+              <h3 style={{ fontSize:16, fontWeight:800, color:'#111827', marginBottom:12 }}>Auto-Backup</h3>
+              <p className="small" style={{ marginBottom:14 }}>Stelle das automatische Backup wieder her.</p>
+              <button className="btn btn-primary" onClick={restoreFromBackup}><Icons.Upload size={18}/> Backup wiederherstellen</button>
+            </div>
+
+            <div className="card" style={{ padding:20 }}>
+              <h3 style={{ fontSize:16, fontWeight:800, color:'#111827', marginBottom:12 }}>LÃ¶schen</h3>
+              <p className="small" style={{ marginBottom:14 }}>Entferne alle lokalen Daten (LocalStorage).</p>
+              <button className="btn btn-danger" onClick={clearAll}><Icons.Trash2 size={18}/> Alles lÃ¶schen</button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Simplified placeholder modules (in full version, these would be enhanced)
+    const LeitfadenModule = (props) => <div style={{padding:32}}><h1>Leitfaden Module (placeholder)</h1></div>;
+    const CodierungModule = (props) => <div style={{padding:32}}><h1>Codierung Module (placeholder)</h1></div>;
+    const QPRCasesModule = (props) => <div style={{padding:32}}><h1>QPR Cases Module (placeholder)</h1></div>;
+    const ReadinessModule = (props) => <div style={{padding:32}}><h1>Readiness Module (placeholder)</h1></div>;
+    const AuswertungModule = (props) => <div style={{padding:32}}><h1>Auswertung Module (placeholder)</h1></div>;
+    const InfoModule = () => <div style={{padding:32}}><h1>Info Module (placeholder)</h1></div>;
+
+    // =========================================================
+    // APP ROOT
+    // =========================================================
+    const App = () => {
+      const [currentModule, setCurrentModule] = useState('dashboard');
+      const [darkMode, setDarkMode] = useState(Storage.get('vera-dark-mode', false));
+
+      const [interviews, setInterviews] = useState(Storage.get('vera-interviews', []));
+      const [codings, setCodings] = useState(Storage.get('vera-codings', []));
+      const [auditCases, setAuditCases] = useState(Storage.get('vera-auditcases', []));
+      const [einrichtungsAudit, setEinrichtungsAudit] = useState(Storage.get('vera-einrichtungsaudit', null));
+
+      useEffect(() => Storage.set('vera-interviews', interviews), [interviews]);
+      useEffect(() => Storage.set('vera-codings', codings), [codings]);
+      useEffect(() => Storage.set('vera-auditcases', auditCases), [auditCases]);
+      useEffect(() => Storage.set('vera-einrichtungsaudit', einrichtungsAudit), [einrichtungsAudit]);
+
+      const toggleDarkMode = useCallback(() => {
+        const newMode = !darkMode;
+        setDarkMode(newMode);
+        Storage.set('vera-dark-mode', newMode);
+        document.body.classList.toggle('dark-mode', newMode);
+      }, [darkMode]);
+
+      useEffect(() => {
+        document.body.classList.toggle('dark-mode', darkMode);
+      }, [darkMode]);
+
+      // Keyboard shortcuts
+      useEffect(() => {
+        const handleKeyPress = (e) => {
+          if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            Storage.createAutoBackup();
+            console.log('Auto-backup triggered');
+          }
+        };
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+      }, []);
+
+      const counts = useMemo(() => ({
+        interviews: interviews.length,
+        codings: codings.length,
+        auditCases: auditCases.length
+      }), [interviews.length, codings.length, auditCases.length]);
+
+      return (
+        <ToastProvider>
+          <div style={{ display:'flex', height:'100vh' }}>
+            <Sidebar 
+              currentModule={currentModule} 
+              setCurrentModule={setCurrentModule} 
+              counts={counts}
+              darkMode={darkMode}
+              toggleDarkMode={toggleDarkMode}
+            />
+
+            <div style={{ flex:1, marginLeft:260, overflowY:'auto' }}>
+              {currentModule === 'dashboard' && (
+                <Dashboard
+                  interviews={interviews}
+                  codings={codings}
+                  auditCases={auditCases}
+                  einrichtungsAudit={einrichtungsAudit}
+                  setCurrentModule={setCurrentModule}
+                />
+              )}
+
+              {currentModule === 'interviews' && (
+                <InterviewModule interviews={interviews} setInterviews={setInterviews} />
+              )}
+
+              {currentModule === 'leitfaden' && (
+                <LeitfadenModule interviews={interviews} setInterviews={setInterviews} />
+              )}
+
+              {currentModule === 'codierung' && (
+                <CodierungModule interviews={interviews} codings={codings} setCodings={setCodings} />
+              )}
+
+              {currentModule === 'qpr-cases' && (
+                <QPRCasesModule
+                  interviews={interviews}
+                  codings={codings}
+                  auditCases={auditCases}
+                  setAuditCases={setAuditCases}
+                />
+              )}
+
+              {currentModule === 'readiness' && (
+                <ReadinessModule
+                  auditCases={auditCases}
+                  einrichtungsAudit={einrichtungsAudit}
+                  setEinrichtungsAudit={setEinrichtungsAudit}
+                />
+              )}
+
+              {currentModule === 'auswertung' && (
+                <AuswertungModule
+                  interviews={interviews}
+                  codings={codings}
+                  auditCases={auditCases}
+                />
+              )}
+
+              {currentModule === 'export' && (
+                <ExportModule
+                  interviews={interviews}
+                  codings={codings}
+                  auditCases={auditCases}
+                  einrichtungsAudit={einrichtungsAudit}
+                  setInterviews={setInterviews}
+                  setCodings={setCodings}
+                  setAuditCases={setAuditCases}
+                  setEinrichtungsAudit={setEinrichtungsAudit}
+                />
+              )}
+
+              {currentModule === 'info' && (
+                <InfoModule />
+              )}
+            </div>
+          </div>
+        </ToastProvider>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
+
+ChatGPT:
+
+Nachgedacht für 10s
+Ich sehe hier eine ziemlich komplette Single-File-App (React + Babel im Browser) – aber ohne konkrete Frage. Damit du trotzdem sofort Nutzen hast, hier die wichtigsten Bugs/Bruchstellen und Quick Wins, die in dem Stand sehr wahrscheinlich auffallen werden (inkl. Copy-&-Paste-Fixes).
+
+1) Zeichensalat (Ã¤/Ã¼/Â§/â€¢/ðŸ…) – Ursache & Fix
+In deinen Konstanten steht Mojibake, z. B. UnterstÃ¼tzung, 3-jÃ¤hrig, Betreuungskraft Â§43b, â€¢, ðŸ“…. Das kommt fast immer von UTF-8 Text, der einmal als ISO-8859-1/Windows-1252 interpretiert wurde (oder umgekehrt).
+
+Fix-Option A (am saubersten): Ersetze die Strings im Code durch echte Umlaute/Sonderzeichen (sofern dein Editor die Datei wirklich als UTF-8 speichert).
+Fix-Option B (robust): Nutze Unicode Escapes in den Daten, z. B. \u00fc für ü, \u00a7 für §, \u2022 für •.
+
+Beispiele (direkt ersetzbar):
+
+const QUALIFIKATIONEN = [
+  'PFK (3-jährig)',
+  'LG1 (1-jährig)',
+  'LG1+LG2',
+  'Ungelernt',
+  'Betreuungskraft \u00a743b'
+];
+Und in deinen Texten:
+
+frage: 'Bitte beschreiben Sie Ihre Rolle, Qualifikation und typische Einsatzanteile (Tour vs. Büro).'
+Wenn du viele Strings hast und es einmalig “reparieren” willst: sag kurz, ob du das in VS Code, Notepad++, o. ä. bearbeitest – dann gebe ich dir den schnellsten Weg (ohne dass du alles manuell anfassen musst). (Ich frage nur nach Tool, nicht nach Inhalt.)
+
+2) Dark Mode ist halb “visuell”, halb “logisch” – Texte werden unlesbar
+Du setzt body.dark-mode, aber viele Komponenten nutzen inline Farben wie color:'#111827' (StatCard, H1s, etc.). Ergebnis: Dark Mode Hintergrund + dunkler Text = schlecht lesbar.
+
+Quick Fix (minimal invasiv): Nutze CSS-Variablen für Text/Surface/Border und greife überall darauf zu.
+
+CSS (oben in <style> ergänzen/ersetzen)
+:root{
+  --bg:#f8fafc;
+  --surface:#ffffff;
+  --surface2:#f9fafb;
+  --text:#111827;
+  --muted:#6b7280;
+  --border:#e5e7eb;
+}
+
+body{ background:var(--bg); color:var(--text); }
+
+body.dark-mode{
+  --bg:#0f172a;
+  --surface:#1e293b;
+  --surface2:#0f172a;
+  --text:#e2e8f0;
+  --muted:#94a3b8;
+  --border:#334155;
+}
+.card{ background:var(--surface); border:1px solid var(--border); }
+.muted{ color:var(--muted); }
+.small{ color: color-mix(in srgb, var(--muted) 70%, transparent); }
+Danach: Inline-Farben reduzieren
+Z. B. in StatCard:
+
+<div style={{ fontSize:30, fontWeight:800, color:'var(--text)' }}>{value}</div>
+Und in Headings ebenfalls color:'var(--text)' statt #111827.
+
+3) Plotly Charts: Schriftfarbe bleibt “hell theme”
+In PlotlyChart setzt du font.color: '#374151' fest. Im Dark Mode sollte das ebenfalls variabel sein.
+
+Fix:
+
+const isDark = document.body.classList.contains('dark-mode');
+font: { family:'Inter, system-ui, sans-serif', color: isDark ? '#e2e8f0' : '#374151', size: 12 },
+Noch besser: nimm auch hier CSS-Variablen (z. B. getComputedStyle(document.body).getPropertyValue('--text')).
+
+4) Auto-Backup Trigger: Storage.set() ruft createAutoBackup() immer auf
+Das ist ok, weil du per Timestamp throttle’st, aber beachte:
+
+Storage.set() wird in jedem React useEffect aufgerufen (bei jeder Änderung).
+
+createAutoBackup() macht mehrere Storage.get() (JSON.parse) → kann bei großen Daten spürbar werden.
+
+Optimierung (1 Zeile, sehr effektiv): throttle “set” selbst, nicht “backup”.
+Oder: in createAutoBackup nicht Storage.get(...) verwenden, sondern localStorage.getItem(...) direkt (spart parse+stringify twice).
+
+Minimaländerung in createAutoBackup:
+
+const backup = {
+  timestamp: now,
+  interviews: JSON.parse(localStorage.getItem('vera-interviews') || '[]'),
+  codings: JSON.parse(localStorage.getItem('vera-codings') || '[]'),
+  auditCases: JSON.parse(localStorage.getItem('vera-auditcases') || '[]'),
+  einrichtungsAudit: JSON.parse(localStorage.getItem('vera-einrichtungsaudit') || 'null'),
+};
+5) Keyboard Shortcut: Ctrl+S – auf Mac klappt’s nicht
+Auf macOS ist es typischerweise ⌘S (metaKey).
+Fix:
+
+if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { ... }
+6) Excel Export: EinrichtungsAudit fehlt + Sheets könnten “breiter” sein
+Du exportierst Interviews/Codings/AuditCases, aber einrichtungsAudit nicht. Wenn das wichtig ist, ergänze ein Sheet:
+
+const einrichtungData = einrichtungsAudit?.bewertungen
+  ? Object.entries(einrichtungsAudit.bewertungen).map(([aspekt, b]) => ({
+      Aspekt: aspekt,
+      Bewertung: b?.bewertung || '',
+      Evidenzen: (b?.evidenzen || []).length
+    }))
+  : [];
+
+const ws4 = XLSX.utils.json_to_sheet(einrichtungData);
+XLSX.utils.book_append_sheet(wb, ws4, "Einrichtung");
+7) Kleine UI-Bugs/Details
+SearchBar Icon-Farbe: dein <Icons.Search /> nutzt currentColor, aber das Wrapper-Div setzt keine Farbe. Setz z. B.:
+
+<div className="search-bar" style={{ color: 'var(--muted)' }}>
+In Interview cards: Emojis sind kaputt (ðŸ“…, â€¢). Nach Fix #1 passt das.
+
+Confirm-Dialoge (confirm(...)) sind “hart” und nicht dark-mode-fähig. Optional: später durch eigenes Modal ersetzen.
+
+Wenn du mir sagst, was du als Nächstes willst …
+Ich kann dir sofort gezielt weiterhelfen, z. B.:
+
+“Mach alle Module fertig (Leitfaden/Codierung/QPR/Readiness/Auswertung)” → ich ergänze die fehlenden Module konsistent im selben Stil.
+
+“Mach daraus ein modernes Build (Vite/React, ohne Babel CDN)” → ich gebe dir saubere Projektstruktur + Migrationsschritte.
+
+“Fix dark mode vollständig + theme system” → ich mache es komplett über CSS-Variablen (ohne Inline-Farbfallen).
+
+“Datenmodell prüfen / Evidenz-Logik debuggen” → ich gehe die QPR-Mapping-/Scoring-Kette durch und schlage Tests vor.
+
+Sag einfach kurz welches Ziel (1 Satz reicht), dann liefere ich dir den passenden Patch/Code.
+
+
+Du:
+kannst du mir den gesamten code einmal überarbeiten und einen plan erstellen was man alles verbessern kann un das ganze zu professionalliseren und als github für dich später bereitzustellen damit du darin arbeiten kannst
+
+ChatGPT:
+
+Nachgedacht für 12s
+Ja — ich kann dir den Code komplett professionalisieren, aber sinnvoll ist das als Refactor in Etappen (sonst endet man mit einer riesigen, schwer testbaren “Big-Bang”-Änderung).
+
+Wichtig vorab (damit es später sauber klappt): Ich kann nicht “dauerhaft” in deinem GitHub arbeiten, aber wenn du mir später den Repo-Link gibst oder ein ZIP hochlädst, kann ich hier konkret Code-Änderungen liefern (Patch-Dateien, neue Files, Struktur, PR-Text), die du 1:1 übernehmen kannst.
+
+Zielbild (was “professionell” hier heißt)
+Du hast aktuell eine Single-HTML-App (React via CDN + Babel im Browser). Professioneller wird das typischerweise so:
+
+Build-Setup (Vite/React) statt Babel im Browser
+
+Saubere Projektstruktur (Components, Pages/Modules, Data, Utils)
+
+TypeScript für Stabilität (optional aber sehr empfehlenswert)
+
+UI-Design System (Theme Variablen, Dark Mode richtig, Komponenten wiederverwendbar)
+
+State/Storage sauber (Schema-Versionierung, Migration, Backup/Restore, Validierung)
+
+Tests (Unit + basic E2E)
+
+CI (Lint/Test/Build in GitHub Actions)
+
+Releases (Versioning, Changelog)
+
+Security/Privacy (lokale Daten, Export/Import sicher, CSP)
+
+Konkreter Verbesserungs-Plan (Roadmap in 4 Phasen)
+Phase 1 — Stabilisieren (1–2 Sessions)
+Ziel: Keine Zeichensalat-Bugs, Dark Mode überall lesbar, weniger Inline-Styling-Fallen, Basis-Qualität hoch.
+
+Tasks
+
+Encoding/Mojibake fix (Ã¤/Â§/â€¢/Emoji)
+
+Theme über CSS-Variablen (kein color:'#111827' hardcoded)
+
+Plotly Theme an Dark Mode koppeln
+
+Keyboard shortcuts: Ctrl+S & Cmd+S
+
+Storage: Backup/Restore robuster + optional “Export EinrichtungsAudit”
+
+Fehler-/Toast-Handling vereinheitlichen (Helper)
+
+Deliverable
+
+Funktional identisch, aber UX stabiler + Dark Mode wirklich brauchbar.
+
+Phase 2 — Modularisieren (2–4 Sessions)
+Ziel: Aus der einen großen Datei wird ein wartbares Codebase-Layout.
+
+Tasks
+
+Split in:
+
+data/ (LEITFADEN, QPR_ASPEKTE, Mappings, Rollen, etc.)
+
+components/ (Sidebar, SearchBar, Modal, StatCard, EmptyState, Pill, Toast)
+
+modules/ (Dashboard, Interviews, Leitfaden, Codierung, QPRCases, Readiness, Auswertung, Export, Info)
+
+lib/ (storage, scoring, export, normalize)
+
+State-Layer (z. B. React Context + reducer oder Zustand)
+
+Form-Komponenten wiederverwendbar
+
+Konstanten & Mapping-Logik entkoppeln von UI (sehr wichtig)
+
+Deliverable
+
+Gleiche App, aber in “Pro-Ordnerstruktur” mit klaren Verantwortlichkeiten.
+
+Phase 3 — Tooling & Qualität (1–3 Sessions)
+Ziel: Professioneller Dev-Workflow.
+
+Tasks
+
+Migration zu Vite + React
+
+ESLint + Prettier (Format + Regeln)
+
+TypeScript (mindestens für types.ts: Interview, Coding, AuditCase, Evidence)
+
+Tests:
+
+Unit: scoring, normalize, export mapping
+
+Optional E2E: Playwright “happy path”
+
+GitHub Actions: lint/test/build
+
+Release/Version: conventional commits + changelog
+
+Deliverable
+
+npm install && npm run dev läuft
+
+PRs sind sauber prüfbar und sicher
+
+Phase 4 — Produktreife Features (optional)
+Ziel: “Business-ready”.
+
+Ideen
+
+Multi-Einrichtungen / Projekte (Profile/Workspaces)
+
+Rollenbasierte Views (PDL vs PFK etc.)
+
+Dashboard KPIs + exportierbare Reports (PDF)
+
+Audit-Readiness Wizard (fehlende Evidenzen guided nachbauen)
+
+Evidenz-Qualität (mindestens 2 Evidenzen / Aspekt, Warnungen)
+
+Import Validierung (Schema + Migration)
+
+Offline-first (IndexedDB statt localStorage)
+
+Wie du es als GitHub bereitstellst (damit ich konkret “darin” arbeiten kann)
+Option A (empfohlen): Repo anlegen + Link schicken
+GitHub → New repo (private oder public)
+
+Code reinpushen
+
+Link hier posten
+
+Dann kann ich:
+
+dir genaue File-Struktur, Refactor-Patches, neue Dateien liefern
+
+PR-Beschreibung + Commit-Plan schreiben
+
+bei Fehlern direkt anhand der Repo-Struktur debuggen
+
+Option B: ZIP hochladen
+Wenn du kein Repo machen willst: ZIP exportieren und hier hochladen. Dann mache ich dasselbe, nur ohne GitHub-Workflow.
+
+Was ich als erstes direkt in deinem aktuellen Code ändern würde (Quick Wins)
+Encoding reparieren (Umlaute, §, Bullet, Emojis)
+
+Theme-Variablen (--text, --surface, --border, --muted) + alle hardcodierten Farben raus
+
+Plotly Fontfarbe/Background an Theme koppeln
+
+Excel export um EinrichtungsAudit erweitern
+
+Cmd+S ergänzen
+
+“Placeholder module” ersetzen (mindestens skeleton + navigation & Search/Filter patterns)
+
+Startpaket: Ziel-Repo-Struktur (so würde ich’s aufbauen)
+vera-bi/
+  src/
+    app/
+      App.tsx
+      routes.ts
+    components/
+      Sidebar/
+      Modal/
+      Toast/
+      StatCard/
+      SearchBar/
+      ...
+    modules/
+      Dashboard/
+      Interviews/
+      Leitfaden/
+      Codierung/
+      QprCases/
+      Readiness/
+      Auswertung/
+      Export/
+      Info/
+    data/
+      rollen.ts
+      leitfaden.ts
+      qpr.ts
+      mappings.ts
+      codebuch.ts
+    lib/
+      storage.ts
+      normalize.ts
+      scoring.ts
+      exportExcel.ts
+      ids.ts
+      theme.ts
+    types/
+      domain.ts
+  index.html
+  package.json
+  vite.config.ts
+  eslint.config.js
+  .github/workflows/ci.yml
+Nächster Schritt (ohne dass du lange erklären musst)
+Sag mir einfach eins von beiden:
+
+„Ich mache ein GitHub-Repo, hier ist der Link: …“
+oder
+
+„Ich lade dir gleich das ZIP hoch.“
+
+Und ich starte dann mit Phase 1+2:
+
+ich gebe dir eine konkrete Commit-Liste (z. B. 8–15 Commits)
+
+und liefere dir den überarbeiteten Code in sauberer Struktur (inkl. Anleitung, wie du’s lokal startest)
+
+Wenn du willst, nenne ich das Repo direkt sinnvoll (z. B. vera-bi-ambulant) und schreibe dir eine fertige README.md + CONTRIBUTING.md + Release-Workflow.
+
+
+
+
