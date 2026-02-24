@@ -229,6 +229,137 @@ const Icons = {
 };
 
 // ============================================================================
+// WISSENSCHAFTLICHE ANALYSE – STATISTISCHE ENGINES
+// ============================================================================
+
+const Stats = {
+  mean: (arr) => (!arr || arr.length === 0) ? 0 : arr.reduce((s, v) => s + v, 0) / arr.length,
+  median: (arr) => {
+    if (!arr || arr.length === 0) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  },
+  standardDeviation: (arr) => {
+    if (!arr || arr.length < 2) return 0;
+    const m = Stats.mean(arr);
+    return Math.sqrt(arr.reduce((s, v) => s + Math.pow(v - m, 2), 0) / (arr.length - 1));
+  },
+  quantile: (arr, p) => {
+    if (!arr || arr.length === 0) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const idx = (sorted.length - 1) * p;
+    const lower = Math.floor(idx), upper = Math.ceil(idx), w = idx % 1;
+    return sorted[lower] * (1 - w) + sorted[upper] * w;
+  },
+  iqr: (arr) => ({ q25: Stats.quantile(arr, 0.25), q50: Stats.median(arr), q75: Stats.quantile(arr, 0.75), iqr: Stats.quantile(arr, 0.75) - Stats.quantile(arr, 0.25) }),
+  skewness: (arr) => {
+    if (!arr || arr.length < 3) return 0;
+    const m = Stats.mean(arr), sd = Stats.standardDeviation(arr);
+    if (sd === 0) return 0;
+    const n = arr.length;
+    return (n / ((n - 1) * (n - 2))) * arr.reduce((s, v) => s + Math.pow((v - m) / sd, 3), 0);
+  },
+};
+
+function berechneBootstrapCI(answers, nBootstrap = 1000, alpha = 0.05) {
+  const vals = Object.values(answers).filter(v => v > 0);
+  if (vals.length < 3) return { lower: 0, upper: 0, se: 0, width: 0, interpretation: "Zu wenige Daten" };
+  const scores = [];
+  for (let i = 0; i < nBootstrap; i++) {
+    const resample = Array.from({ length: vals.length }, () => vals[Math.floor(Math.random() * vals.length)]);
+    const dimS = {};
+    const dimMax = {};
+    DIMENSIONEN.forEach(d => { dimS[d] = 0; dimMax[d] = 0; });
+    LEITFADEN.forEach((q, idx) => {
+      const v = idx < resample.length ? resample[idx] : (answers[q.id] ?? 0);
+      dimS[q.dimension] += v * q.gewicht;
+      dimMax[q.dimension] += 4 * q.gewicht;
+    });
+    DIMENSIONEN.forEach(d => { dimS[d] = dimMax[d] > 0 ? (dimS[d] / dimMax[d]) * 100 : 0; });
+    scores.push(Math.round(0.25 * dimS.prozess + 0.25 * dimS.ressource + 0.25 * dimS["qualität"] + 0.25 * dimS.digital));
+  }
+  scores.sort((a, b) => a - b);
+  const lo = Math.floor(nBootstrap * alpha / 2);
+  const hi = Math.floor(nBootstrap * (1 - alpha / 2));
+  const width = scores[hi] - scores[lo];
+  return {
+    lower: scores[lo], upper: scores[hi],
+    se: Math.round(Stats.standardDeviation(scores) * 10) / 10,
+    width,
+    interpretation: width <= 10 ? "Sehr präzise Schätzung" : width <= 20 ? "Akzeptable Präzision" : width <= 30 ? "Moderate Unsicherheit" : "Hohe Unsicherheit – mehr Daten benötigt"
+  };
+}
+
+function sensitivitaetsanalyse(answers, baseWeights = [0.25, 0.25, 0.25, 0.25], delta = 0.1) {
+  const dimScoresLocal = calculateDimensionScores(answers);
+  const dimArr = DIMENSIONEN.map(d => dimScoresLocal[d] || 0);
+  const baseScore = Math.round(baseWeights.reduce((s, w, i) => s + w * dimArr[i], 0));
+  const variations = [];
+  for (let i = 0; i < 4; i++) {
+    for (const mult of [1 - delta, 1 + delta]) {
+      const nw = [...baseWeights];
+      nw[i] *= mult;
+      const sum = nw.reduce((a, b) => a + b, 0);
+      const norm = nw.map(w => w / sum);
+      const score = Math.round(norm.reduce((s, w, j) => s + w * dimArr[j], 0));
+      variations.push({ dimension: DIM_LABELS[DIMENSIONEN[i]], delta: mult > 1 ? `+${Math.round(delta*100)}%` : `-${Math.round(delta*100)}%`, score, change: score - baseScore });
+    }
+  }
+  const allScores = variations.map(v => v.score);
+  const span = Math.max(...allScores) - Math.min(...allScores);
+  return {
+    baseline: baseScore, variations,
+    range: { min: Math.min(...allScores), max: Math.max(...allScores), span },
+    robustness: span <= 5 ? "Sehr robust – Gewichtung unproblematisch" : span <= 10 ? "Robust – akzeptable Variation" : span <= 15 ? "Moderat sensitiv – Gewichtung prüfen" : "Hoch sensitiv – empirische Kalibrierung empfohlen"
+  };
+}
+
+function berechneDatenqualitaet(interviews, codings, answers) {
+  let score = 0;
+  const answeredCount = Object.values(answers).filter(v => v > 0).length;
+  const answerRate = Math.min(1, answeredCount / 40);
+  score += answerRate * 35;
+  const interviewScore = Math.min(1, interviews.length / 6);
+  score += interviewScore * 25;
+  const codingRate = Math.min(1, codings.length / Math.max(1, interviews.length * 5));
+  score += codingRate * 20;
+  const coverage = calculateEvidenceCoverage(codings);
+  score += (coverage / 100) * 20;
+  const s = Math.round(score);
+  return {
+    score: s,
+    interpretation: s >= 90 ? "Exzellente Datenqualität" : s >= 75 ? "Gute Datenqualität" : s >= 60 ? "Akzeptable Datenqualität" : s >= 40 ? "Unzureichend – Nachbesserung erforderlich" : "Kritisch – systematische Verbesserung notwendig",
+    components: { leitfragen: Math.round(answerRate * 35), interviews: Math.round(interviewScore * 25), codierungen: Math.round(codingRate * 20), evidenz: Math.round((coverage / 100) * 20) }
+  };
+}
+
+function berechneCohenKappa(ratings1, ratings2) {
+  if (!ratings1 || !ratings2 || ratings1.length !== ratings2.length || ratings1.length === 0) return { kappa: 0, interpretation: "Ungültige Daten" };
+  const cats = [...new Set([...ratings1, ...ratings2])];
+  const n = ratings1.length;
+  const matrix = {};
+  cats.forEach(c1 => { matrix[c1] = {}; cats.forEach(c2 => { matrix[c1][c2] = 0; }); });
+  for (let i = 0; i < n; i++) { if (matrix[ratings1[i]]) matrix[ratings1[i]][ratings2[i]]++; }
+  let po = 0;
+  cats.forEach(c => { po += matrix[c][c]; });
+  po /= n;
+  let pe = 0;
+  cats.forEach(c => {
+    const rs = cats.reduce((s, c2) => s + matrix[c][c2], 0);
+    const cs = cats.reduce((s, c1) => s + matrix[c1][c], 0);
+    pe += (rs / n) * (cs / n);
+  });
+  const kappa = pe === 1 ? 1 : (po - pe) / (1 - pe);
+  const k = Math.round(kappa * 1000) / 1000;
+  return {
+    kappa: k, observed: Math.round(po * 1000) / 1000, expected: Math.round(pe * 1000) / 1000,
+    interpretation: k < 0 ? "Keine Übereinstimmung" : k < 0.20 ? "Geringe Übereinstimmung" : k < 0.40 ? "Ausreichende Übereinstimmung" : k < 0.60 ? "Mittlere Übereinstimmung" : k < 0.80 ? "Substanzielle Übereinstimmung" : "Nahezu perfekte Übereinstimmung",
+    quality: k >= 0.70 ? "excellent" : k >= 0.60 ? "good" : k >= 0.40 ? "fair" : "poor"
+  };
+}
+
+// ============================================================================
 // PLOTLY CHART COMPONENT
 // ============================================================================
 
@@ -306,6 +437,7 @@ export default function VeRABI() {
     { id: "prozess", label: "Prozessmetriken", icon: Icons.Activity },
     { id: "benchmark", label: "Benchmarks", icon: Icons.BarChart },
     { id: "simulation", label: "Simulation", icon: Icons.Zap },
+    { id: "wissenschaft", label: "Wiss. Analyse", icon: Icons.TrendingUp },
     { id: "export", label: "Export / Import", icon: Icons.Download },
   ];
 
@@ -377,6 +509,7 @@ export default function VeRABI() {
         {activeModule === "prozess" && <ProzessModule answers={answers} dimScores={dimScores} />}
         {activeModule === "benchmark" && <BenchmarkModule orgScore={orgScore} dimScores={dimScores} />}
         {activeModule === "simulation" && <SimulationModule dimScores={dimScores} />}
+        {activeModule === "wissenschaft" && <WissenschaftModule answers={answers} interviews={interviews} codings={codings} dimScores={dimScores} orgScore={orgScore} evidenceCoverage={evidenceCoverage} />}
         {activeModule === "export" && <ExportModule data={{ interviews, codings, answers, orgs, users }} onImport={(d) => {
           if (d.interviews) setInterviewsP(d.interviews);
           if (d.codings) setCodingsP(d.codings);
@@ -1204,6 +1337,304 @@ function SimulationModule({ dimScores }) {
           </CardBody>
         </Card>
       </div>
+    </>
+  );
+}
+
+// ============================================================================
+// WISSENSCHAFTLICHE ANALYSE MODULE
+// ============================================================================
+
+function WissenschaftModule({ answers, interviews, codings, dimScores, orgScore, evidenceCoverage }) {
+  const [showReport, setShowReport] = useState(false);
+
+  const ci = useMemo(() => berechneBootstrapCI(answers), [answers]);
+  const sensitivity = useMemo(() => sensitivitaetsanalyse(answers), [answers]);
+  const quality = useMemo(() => berechneDatenqualitaet(interviews, codings, answers), [interviews, codings, answers]);
+
+  const answeredCount = Object.values(answers).filter(v => v > 0).length;
+  const missingRate = Math.round(((40 - answeredCount) / 40) * 100);
+
+  // Verteilung der Antworten
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  Object.values(answers).forEach(v => { if (v >= 1 && v <= 4) distribution[v]++; });
+
+  // Deskriptive Statistik der Antworten
+  const answerVals = Object.values(answers).filter(v => v > 0);
+  const descStats = answerVals.length > 0 ? {
+    mean: Stats.mean(answerVals).toFixed(2),
+    median: Stats.median(answerVals),
+    sd: Stats.standardDeviation(answerVals).toFixed(2),
+    skewness: Stats.skewness(answerVals).toFixed(3),
+    iqr: Stats.iqr(answerVals),
+    n: answerVals.length,
+  } : null;
+
+  const generateReport = () => {
+    setShowReport(!showReport);
+  };
+
+  const downloadReport = () => {
+    const report = `VeRA-BI WISSENSCHAFTLICHER ANALYSEBERICHT
+==========================================
+Erstellt: ${new Date().toLocaleString('de-DE')}
+Version: Research Edition 1.0
+
+1. STICHPROBENBESCHREIBUNG
+---------------------------
+Interviews:           ${interviews.length}
+Codierungen:          ${codings.length}
+Beantwortete Fragen:  ${answeredCount} / 40 (${100 - missingRate}%)
+Missing Rate:         ${missingRate}%
+
+2. DESKRIPTIVE STATISTIK (Leitfragen-Antworten)
+-------------------------------------------------
+n:                    ${descStats?.n || 0}
+Mittelwert:           ${descStats?.mean || '-'}
+Median:               ${descStats?.median || '-'}
+Standardabweichung:   ${descStats?.sd || '-'}
+Schiefe:              ${descStats?.skewness || '-'}
+IQR:                  ${descStats ? `${descStats.iqr.q25} – ${descStats.iqr.q75}` : '-'}
+
+Verteilung:
+  1 (trifft nicht zu):     ${distribution[1]}x (${answeredCount > 0 ? Math.round(distribution[1]/answeredCount*100) : 0}%)
+  2 (trifft kaum zu):      ${distribution[2]}x (${answeredCount > 0 ? Math.round(distribution[2]/answeredCount*100) : 0}%)
+  3 (trifft überwiegend zu): ${distribution[3]}x (${answeredCount > 0 ? Math.round(distribution[3]/answeredCount*100) : 0}%)
+  4 (trifft voll zu):      ${distribution[4]}x (${answeredCount > 0 ? Math.round(distribution[4]/answeredCount*100) : 0}%)
+
+3. ORGANISATIONS-SCORE (mit Unsicherheitsmaßen)
+-------------------------------------------------
+Gesamtscore:          ${orgScore}%
+95% Konfidenzintervall: [${ci.lower}%, ${ci.upper}%]
+Standardfehler:       ±${ci.se}%
+KI-Breite:            ${ci.width} Prozentpunkte
+Interpretation:       ${ci.interpretation}
+
+Dimensionsscores:
+  Prozessstabilität:    ${dimScores.prozess}%
+  Ressourcenlage:       ${dimScores.ressource}%
+  Qualitätsstruktur:    ${dimScores["qualität"]}%
+  Digitalisierung:      ${dimScores.digital}%
+
+4. SENSITIVITÄTSANALYSE
+------------------------
+Baseline-Score:       ${sensitivity.baseline}%
+Score-Range:          ${sensitivity.range.min}% – ${sensitivity.range.max}%
+Variationsbreite:     ±${Math.round(sensitivity.range.span / 2)} Prozentpunkte
+Robustheit:           ${sensitivity.robustness}
+
+Detaillierte Variationen:
+${sensitivity.variations.map(v => `  ${v.dimension} (${v.delta}): ${v.score}% (Δ ${v.change >= 0 ? '+' : ''}${v.change}%)`).join('\n')}
+
+5. DATENQUALITÄT
+-----------------
+Gesamtscore:          ${quality.score}/100
+Bewertung:            ${quality.interpretation}
+
+Komponenten:
+  Leitfragen:           ${quality.components.leitfragen}/35
+  Interviews:           ${quality.components.interviews}/25
+  Codierungen:          ${quality.components.codierungen}/20
+  Evidenzabdeckung:     ${quality.components.evidenz}/20
+
+6. EVIDENZABDECKUNG (QPR)
+--------------------------
+Abdeckungsquote:      ${evidenceCoverage}%
+
+7. METHODISCHE LIMITATIONEN
+-----------------------------
+- Gewichtungen nicht empirisch kalibriert (AHP empfohlen)
+- Keine externe Validierung gegen QPR-Prüfergebnis
+- Querschnittsdaten (keine Test-Retest-Reliabilität)
+- Forced-Choice-Skala (1–4) vermeidet Tendenz zur Mitte
+- Bootstrap-KI basiert auf Resampling der vorhandenen Daten
+
+8. EMPFEHLUNGEN
+----------------
+${quality.score < 60 ? '🔴 PRIORITÄT: Datenqualität verbessern – mehr Leitfragen beantworten\n' : ''}${ci.width > 20 ? '🔴 Hohe Unsicherheit – mehr Datenquellen einbeziehen\n' : ''}${missingRate > 30 ? '🟡 Hohe Missing Rate – Interview-Prozess überprüfen\n' : ''}${quality.score >= 75 ? '✓ Datenqualität ist gut – Fokus auf Validierung legen\n' : ''}
+==========================================
+Ende des wissenschaftlichen Berichts`;
+
+    const blob = new Blob([report], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `VeRA-BI_Wissenschaftlicher_Bericht_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <>
+      <PageTitle title="Wissenschaftliche Analyse" subtitle="Statistische Robustheit, Konfidenzintervalle & Datenqualität" />
+
+      {/* Datenqualität Banner */}
+      <Card style={{ marginBottom: 20, background: quality.score >= 75 ? "#ecfdf5" : quality.score >= 60 ? "#fffbeb" : "#fef2f2" }}>
+        <CardBody style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1 }}>Datenqualität</div>
+            <div style={{ fontSize: 36, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: ampel(quality.score).color, marginTop: 4 }}>{quality.score}/100</div>
+            <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>{quality.interpretation}</div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
+            {Object.entries(quality.components).map(([key, val]) => (
+              <div key={key} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.7)", borderRadius: 6 }}>
+                <span style={{ color: "#6b7280" }}>{key}: </span>
+                <span style={{ fontWeight: 700 }}>{val}</span>
+              </div>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+        {/* Konfidenzintervall */}
+        <Card>
+          <CardHeader title="Org-Score (mit 95% KI)" subtitle="Bootstrap-Konfidenzintervall" icon={Icons.Shield} />
+          <CardBody>
+            <div style={{ fontSize: 42, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "#111827" }}>{orgScore}%</div>
+            <div style={{ fontSize: 14, color: "#6b7280", margin: "8px 0" }}>
+              95% KI: <span style={{ fontWeight: 700, color: "#111827" }}>[{ci.lower}%, {ci.upper}%]</span>
+            </div>
+            <div style={{ fontSize: 12, color: "#9ca3af" }}>Standardfehler: ±{ci.se}% · {ci.interpretation}</div>
+            <div style={{ marginTop: 16, padding: 14, background: "#f8fafc", borderRadius: 10, fontSize: 13, lineHeight: 1.6, color: "#374151" }}>
+              Mit 95% Wahrscheinlichkeit liegt der wahre Organisations-Score zwischen {ci.lower}% und {ci.upper}%.
+              {ci.width > 20 && " Die breite Streuung deutet auf hohe Unsicherheit – mehr Daten empfohlen."}
+            </div>
+            <PlotlyChart data={[
+              { x: ["Score"], y: [orgScore], error_y: { type: "data", symmetric: false, array: [ci.upper - orgScore], arrayminus: [orgScore - ci.lower], color: "#6366f1" }, type: "bar", marker: { color: "#3b82f6" }, width: [0.4] },
+            ]} layout={{ height: 200, yaxis: { range: [0, 100], title: "%" }, showlegend: false }} />
+          </CardBody>
+        </Card>
+
+        {/* Sensitivitätsanalyse */}
+        <Card>
+          <CardHeader title="Sensitivitätsanalyse" subtitle="±10% Gewichtungsvariation" icon={Icons.Activity} />
+          <CardBody>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Score-Range bei Gewichtungsvariation:</div>
+            <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "#111827" }}>
+              {sensitivity.range.min}% – {sensitivity.range.max}%
+            </div>
+            <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Variationsbreite: ±{Math.round(sensitivity.range.span / 2)}%</div>
+            <Badge label={sensitivity.robustness} color={sensitivity.range.span <= 10 ? "#059669" : "#f59e0b"} bg={sensitivity.range.span <= 10 ? "#ecfdf5" : "#fffbeb"} />
+
+            <div style={{ marginTop: 16 }}>
+              {sensitivity.variations.map((v, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #f1f5f9", fontSize: 12 }}>
+                  <span style={{ color: "#6b7280" }}>{v.dimension} ({v.delta})</span>
+                  <div>
+                    <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 700 }}>{v.score}%</span>
+                    <span style={{ marginLeft: 8, fontWeight: 600, color: v.change >= 0 ? "#10b981" : "#ef4444" }}>
+                      {v.change >= 0 ? "+" : ""}{v.change}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Deskriptive Statistik */}
+      {descStats && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+          <Card>
+            <CardHeader title="Deskriptive Statistik" subtitle="Leitfragen-Antworten (Forced-Choice 1–4)" icon={Icons.BarChart} />
+            <CardBody>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
+                {[
+                  { l: "Mittelwert", v: descStats.mean },
+                  { l: "Median", v: descStats.median },
+                  { l: "Std.-Abw.", v: descStats.sd },
+                  { l: "Schiefe", v: descStats.skewness },
+                  { l: "Q25", v: descStats.iqr.q25 },
+                  { l: "Q75", v: descStats.iqr.q75 },
+                ].map(s => (
+                  <div key={s.l} style={{ padding: 10, background: "#f8fafc", borderRadius: 8, textAlign: "center" }}>
+                    <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>{s.l}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'JetBrains Mono'", color: "#111827", marginTop: 2 }}>{s.v}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, padding: 12, background: "#f8fafc", borderRadius: 8 }}>
+                {parseFloat(descStats.skewness) < -0.5 ? "Linksschiefe Verteilung: Tendenz zu höheren Werten (positive Organisationsbewertung)." :
+                 parseFloat(descStats.skewness) > 0.5 ? "Rechtsschiefe Verteilung: Tendenz zu niedrigeren Werten (kritische Bewertung)." :
+                 "Annähernd symmetrische Verteilung der Antworten."}
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="Antwortverteilung" subtitle="Häufigkeit der Skalenwerte" icon={Icons.BarChart} />
+            <CardBody>
+              <PlotlyChart data={[{
+                x: ["1 – trifft nicht zu", "2 – trifft kaum zu", "3 – überwiegend", "4 – trifft voll zu"],
+                y: [distribution[1], distribution[2], distribution[3], distribution[4]],
+                type: "bar",
+                marker: { color: ["#ef4444", "#f59e0b", "#3b82f6", "#10b981"] },
+              }]} layout={{ height: 250, yaxis: { title: "Anzahl" } }} />
+            </CardBody>
+          </Card>
+        </div>
+      )}
+
+      {/* Missing Data */}
+      <Card style={{ marginBottom: 20 }}>
+        <CardHeader title="Missing Data Analyse" icon={Icons.AlertTriangle} />
+        <CardBody>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase" }}>Leitfragen</div>
+              <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'JetBrains Mono'", color: ampel(100 - missingRate).color }}>{100 - missingRate}%</div>
+              <div style={{ fontSize: 11, color: "#9ca3af" }}>{answeredCount} / 40 beantwortet</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase" }}>Interviews</div>
+              <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'JetBrains Mono'", color: "#111827" }}>{interviews.length}</div>
+              <div style={{ fontSize: 11, color: "#9ca3af" }}>durchgeführt</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase" }}>Codierungen</div>
+              <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'JetBrains Mono'", color: "#111827" }}>{codings.length}</div>
+              <div style={{ fontSize: 11, color: "#9ca3af" }}>erfasst</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase" }}>QPR-Evidenz</div>
+              <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'JetBrains Mono'", color: ampel(evidenceCoverage).color }}>{evidenceCoverage}%</div>
+              <div style={{ fontSize: 11, color: "#9ca3af" }}>Abdeckung</div>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Bericht generieren */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+        <Btn onClick={generateReport}><Icons.FileText size={16} /> {showReport ? "Bericht ausblenden" : "Wissenschaftlichen Bericht anzeigen"}</Btn>
+        <Btn variant="secondary" onClick={downloadReport}><Icons.Download size={16} /> Bericht herunterladen (.txt)</Btn>
+      </div>
+
+      {showReport && (
+        <Card>
+          <CardHeader title="Wissenschaftlicher Bericht" subtitle="Generiert für Bachelorarbeit / Methodik-Kapitel" icon={Icons.FileText} />
+          <CardBody>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, lineHeight: 1.7, color: "#374151", whiteSpace: "pre-wrap", background: "#f8fafc", padding: 20, borderRadius: 10, maxHeight: 500, overflowY: "auto" }}>
+{`STICHPROBE: ${interviews.length} Interviews, ${codings.length} Codierungen, ${answeredCount}/40 Leitfragen
+ORGANISATIONS-SCORE: ${orgScore}% [95%-KI: ${ci.lower}%–${ci.upper}%], SE=±${ci.se}%
+DIMENSIONEN: Prozess ${dimScores.prozess}% | Ressource ${dimScores.ressource}% | Qualität ${dimScores["qualität"]}% | Digital ${dimScores.digital}%
+SENSITIVITÄT: Range ${sensitivity.range.min}%–${sensitivity.range.max}% (±${Math.round(sensitivity.range.span/2)}%) → ${sensitivity.robustness}
+DATENQUALITÄT: ${quality.score}/100 → ${quality.interpretation}
+QPR-EVIDENZ: ${evidenceCoverage}% Abdeckung
+${descStats ? `DESKRIPTIV: M=${descStats.mean}, Mdn=${descStats.median}, SD=${descStats.sd}, Skew=${descStats.skewness}` : ''}
+
+METHODISCHE ANMERKUNGEN:
+• Forced-Choice-Skala (1–4) vermeidet Tendenz zur Mitte
+• Gewichtung: gleichgewichtetes 4-Dimensionen-Modell (je 25%)
+• Bootstrap-KI: n=1000 Resamples, Perzentil-Methode
+• Sensitivitätsanalyse: ±10% Gewichtungsvariation mit Renormalisierung`}
+            </div>
+          </CardBody>
+        </Card>
+      )}
     </>
   );
 }
