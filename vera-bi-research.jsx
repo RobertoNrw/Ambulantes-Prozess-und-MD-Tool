@@ -5,24 +5,63 @@ import * as Plotly from "plotly";
 // DOMAIN LAYER
 // ============================================================================
 
-const ROLLEN = ["PDL", "PFK", "Ungelernt"];
+const ROLLEN = ["PDL", "stvPDL", "PFK_LG", "PFK_ST", "Ungelernt"];
 
 const CODEBUCH = [
-  { id: "P01", label: "Personalmangel", ober: "Personal", qpr: "QB5.3", kritikalitaet: 3 },
-  { id: "P02", label: "Überlastung", ober: "Personal", qpr: "QB5.3", kritikalitaet: 3 },
-  { id: "P03", label: "Qualifikationsdefizit", ober: "Personal", qpr: "QB3.1", kritikalitaet: 2 },
-  { id: "T01", label: "Zeitdruck Touren", ober: "Touren", qpr: "QB1.1", kritikalitaet: 3 },
-  { id: "T02", label: "Planungsprobleme", ober: "Touren", qpr: "QB1.1", kritikalitaet: 2 },
-  { id: "T03", label: "Ausfallkompensation fehlt", ober: "Touren", qpr: "QB1.1", kritikalitaet: 3 },
-  { id: "Q01", label: "Risikomanagement fehlt", ober: "Qualität", qpr: "QB1.2", kritikalitaet: 3 },
-  { id: "Q02", label: "Pflegeplanung unvollständig", ober: "Qualität", qpr: "QB1.2", kritikalitaet: 2 },
-  { id: "Q03", label: "Beschwerden ungeklärt", ober: "Qualität", qpr: "QB1.3", kritikalitaet: 2 },
-  { id: "K01", label: "Ablehnungen häufig", ober: "Kapazität", qpr: "QB1.3", kritikalitaet: 2 },
-  { id: "K02", label: "Kapazitätsengpass", ober: "Kapazität", qpr: "QB5.3", kritikalitaet: 3 },
-  { id: "D01", label: "Dokumentation lückenhaft", ober: "Dokumentation", qpr: "QB1.2", kritikalitaet: 2 },
-  { id: "D02", label: "Keine digitale Doku", ober: "Dokumentation", qpr: "QB1.2", kritikalitaet: 1 },
-  { id: "S01", label: "Keine Kennzahlensteuerung", ober: "Steuerung", qpr: "QB3.1", kritikalitaet: 2 },
-  { id: "S02", label: "Keine strategische Planung", ober: "Steuerung", qpr: "QB3.1", kritikalitaet: 1 },
+  // Personal (7)
+  { id: "P01", label: "Personalmangel", ober: "Personal", qpr: "QB5.3", kritikalitaet: 3, keywords: ["personalmangel", "unterbesetzt", "stellen", "vakanz"] },
+  { id: "P02", label: "Überlastung/Fluktuation", ober: "Personal", qpr: "QB5.3", kritikalitaet: 3, keywords: ["überlast", "fluktuation", "kündigung", "burnout"] },
+  { id: "P03", label: "Qualifikationsdefizit", ober: "Personal", qpr: "QB3.1", kritikalitaet: 2, keywords: ["qualifikation", "kompetenz", "schulung", "fortbildung"] },
+  { id: "P04", label: "Krankheitsausfall", ober: "Personal", qpr: "QB5.3", kritikalitaet: 3, keywords: ["krankheit", "ausfall", "krankenstand", "fehlzeiten"] },
+  { id: "P05", label: "Einarbeitung", ober: "Personal", qpr: "QB3.1", kritikalitaet: 2, keywords: ["einarbeitung", "mentor", "neue mitarbeiter"] },
+  { id: "P06", label: "Arbeitszeitmodell", ober: "Personal", qpr: "QB5.3", kritikalitaet: 1, keywords: ["arbeitszeit", "teilzeit", "flexibel", "schicht"] },
+  { id: "P07", label: "Springerpool", ober: "Personal", qpr: "QB5.3", kritikalitaet: 2, keywords: ["springer", "pool", "vertretung", "reserve"] },
+  // Einzugsgebiet (5)
+  { id: "EG01", label: "Gebietsfestlegung", ober: "Einzugsgebiet", qpr: "QB5.3", kritikalitaet: 1, keywords: ["einzugsgebiet", "radius", "gebiet"] },
+  { id: "EG02", label: "Stadt-Land-Unterschied", ober: "Einzugsgebiet", qpr: "QB5.3", kritikalitaet: 1, keywords: ["stadt", "land", "urban", "rural"] },
+  { id: "EG03", label: "Wegekosten", ober: "Einzugsgebiet", qpr: "QB5.3", kritikalitaet: 2, keywords: ["wegepauschale", "wegekosten", "fahrtkosten", "kilometer"] },
+  { id: "EG04", label: "Alternative Mobilität", ober: "Einzugsgebiet", qpr: "QB5.3", kritikalitaet: 1, keywords: ["e-bike", "fahrrad", "öpnv", "mobilität"] },
+  { id: "EG05", label: "Parkplatzproblematik", ober: "Einzugsgebiet", qpr: "QB5.3", kritikalitaet: 1, keywords: ["parkplatz", "knöllchen", "parken"] },
+  // Tourenplanung (5)
+  { id: "T01", label: "Zeitdruck/Optimierung", ober: "Touren", qpr: "QB1.1", kritikalitaet: 3, keywords: ["zeitdruck", "optimierung", "effizient", "zeit"] },
+  { id: "T02", label: "Planungsprobleme", ober: "Touren", qpr: "QB1.1", kritikalitaet: 2, keywords: ["planung", "software", "medifox", "vivendi", "touren"] },
+  { id: "T03", label: "Ausfallkompensation fehlt", ober: "Touren", qpr: "QB1.1", kritikalitaet: 3, keywords: ["ausfall", "kompensation", "einspringen", "notfall"] },
+  { id: "T04", label: "Kontinuität", ober: "Touren", qpr: "QB1.1", kritikalitaet: 2, keywords: ["kontinuität", "bezugspflege", "stammkunde"] },
+  { id: "T05", label: "Pausen", ober: "Touren", qpr: "QB1.1", kritikalitaet: 2, keywords: ["pause", "erholung", "ruhezeit"] },
+  // Versorgung (3)
+  { id: "V01", label: "Ablehnungen häufig", ober: "Versorgung", qpr: "QB1.3", kritikalitaet: 2, keywords: ["ablehnung", "kapazität", "warteliste"] },
+  { id: "V02", label: "Leistungsarten", ober: "Versorgung", qpr: "QB1.1", kritikalitaet: 1, keywords: ["hkp", "hauswirtschaft", "leistung", "sgb"] },
+  { id: "V03", label: "Entlassmanagement", ober: "Versorgung", qpr: "QB1.3", kritikalitaet: 2, keywords: ["entlassung", "krankenhaus", "überleitung", "recare"] },
+  // Qualität (6)
+  { id: "Q01", label: "Risikomanagement fehlt", ober: "Qualität", qpr: "QB1.2", kritikalitaet: 3, keywords: ["risiko", "gefahr", "sturz", "dekubitus"] },
+  { id: "Q02", label: "Pflegeplanung unvollständig", ober: "Qualität", qpr: "QB1.2", kritikalitaet: 2, keywords: ["pflegeplanung", "sis", "maßnahme", "assessment"] },
+  { id: "Q03", label: "Beschwerden ungeklärt", ober: "Qualität", qpr: "QB1.3", kritikalitaet: 2, keywords: ["beschwerde", "kritik", "unzufried"] },
+  { id: "Q04", label: "Gewaltschutz", ober: "Qualität", qpr: "QB1.2", kritikalitaet: 3, keywords: ["gewalt", "schutz", "vernachlässigung"] },
+  { id: "Q05", label: "QM-Ziele fehlen", ober: "Qualität", qpr: "QB3.1", kritikalitaet: 2, keywords: ["qualitätsziel", "qm", "audit", "kennzahl"] },
+  { id: "Q06", label: "Behandlungssicherheit", ober: "Qualität", qpr: "QB1.2", kritikalitaet: 3, keywords: ["sicherheit", "fehler", "medikament", "wunde"] },
+  // Dokumentation (3)
+  { id: "D01", label: "Dokumentation lückenhaft", ober: "Dokumentation", qpr: "QB1.2", kritikalitaet: 2, keywords: ["dokumentation", "lücke", "unvollständig", "doku"] },
+  { id: "D02", label: "Keine digitale Doku", ober: "Dokumentation", qpr: "QB1.2", kritikalitaet: 1, keywords: ["digital", "papier", "handschrift"] },
+  { id: "D03", label: "Doku-Schulung fehlt", ober: "Dokumentation", qpr: "QB3.1", kritikalitaet: 1, keywords: ["schulung", "training", "anleitung"] },
+  // Digitalisierung (5)
+  { id: "DI01", label: "Softwareauswahl", ober: "Digitalisierung", qpr: "QB3.1", kritikalitaet: 1, keywords: ["software", "system", "app", "tool"] },
+  { id: "DI02", label: "TI-Nutzung", ober: "Digitalisierung", qpr: "QB3.1", kritikalitaet: 1, keywords: ["ti", "telematik", "erezept", "epa"] },
+  { id: "DI03", label: "Fördermittel", ober: "Digitalisierung", qpr: "QB3.1", kritikalitaet: 1, keywords: ["förderung", "fördermittel", "zuschuss"] },
+  { id: "DI04", label: "Mobile Endgeräte", ober: "Digitalisierung", qpr: "QB1.2", kritikalitaet: 2, keywords: ["smartphone", "tablet", "mobil", "handy"] },
+  { id: "DI05", label: "Digitale Akzeptanz gering", ober: "Digitalisierung", qpr: "QB3.1", kritikalitaet: 2, keywords: ["akzeptanz", "widerstand", "ablehnung"] },
+  // Steuerung (2)
+  { id: "S01", label: "Keine Kennzahlensteuerung", ober: "Steuerung", qpr: "QB3.1", kritikalitaet: 2, keywords: ["kennzahl", "controlling", "steuerung", "kpi"] },
+  { id: "S02", label: "Keine strategische Planung", ober: "Steuerung", qpr: "QB3.1", kritikalitaet: 1, keywords: ["strategie", "planung", "zukunft", "vision"] },
+  // Kooperation (5)
+  { id: "K01", label: "Trägerkooperation", ober: "Kooperation", qpr: "QB3.1", kritikalitaet: 1, keywords: ["träger", "verbund", "kooperation"] },
+  { id: "K02", label: "Arztkooperation", ober: "Kooperation", qpr: "QB1.3", kritikalitaet: 2, keywords: ["arzt", "verordnung", "hausarzt", "rezept"] },
+  { id: "K03", label: "Netzwerke", ober: "Kooperation", qpr: "QB3.1", kritikalitaet: 1, keywords: ["netzwerk", "austausch", "pflegestützpunkt"] },
+  { id: "K04", label: "Angehörigenarbeit", ober: "Kooperation", qpr: "QB1.3", kritikalitaet: 2, keywords: ["angehörige", "familie", "beratung"] },
+  { id: "K05", label: "Externe Partner", ober: "Kooperation", qpr: "QB3.1", kritikalitaet: 1, keywords: ["apotheke", "sanitätshaus", "physio"] },
+  // Stress (3)
+  { id: "ST01", label: "Hauptstressoren", ober: "Stress", qpr: "QB5.3", kritikalitaet: 3, keywords: ["stress", "belastung", "druck", "überforder"] },
+  { id: "ST02", label: "Vereinbarkeit", ober: "Stress", qpr: "QB5.3", kritikalitaet: 2, keywords: ["familie", "beruf", "vereinbarkeit"] },
+  { id: "ST03", label: "Entlastung fehlt", ober: "Stress", qpr: "QB5.3", kritikalitaet: 2, keywords: ["entlastung", "hilfe", "unterstützung", "supervision"] },
 ];
 
 const QPR_ASPEKTE = [
@@ -35,66 +74,93 @@ const QPR_ASPEKTE = [
 
 const LEITFADEN = [
   // BLOCK A – Struktur & Organisation
-  { id:"A1", block:"Struktur", text:"Sind Verantwortlichkeiten im Pflegedienst klar definiert und allen Mitarbeitenden bekannt?", rollen:["PDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"A2", block:"Struktur", text:"Existieren schriftlich fixierte Prozessstandards für die wichtigsten Abläufe?", rollen:["PDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
-  { id:"A3", block:"Struktur", text:"Werden Entscheidungen systematisch dokumentiert und nachvollziehbar gemacht?", rollen:["PDL"], qpr:["QB1.1"], dimension:"prozess", gewicht:1 },
-  { id:"A4", block:"Struktur", text:"Wird die Einhaltung der Standards regelmäßig kontrolliert?", rollen:["PDL"], qpr:["QB5.3"], dimension:"qualität", gewicht:2 },
-  { id:"A5", block:"Struktur", text:"Finden regelmäßige Teambesprechungen mit strukturierter Agenda statt?", rollen:["PDL","PFK"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
+  { id:"A1", block:"Struktur", text:"Sind Verantwortlichkeiten im Pflegedienst klar definiert und allen Mitarbeitenden bekannt?", impulse:"Organigramm? Stellenbeschreibungen?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
+  { id:"A2", block:"Struktur", text:"Existieren schriftlich fixierte Prozessstandards für die wichtigsten Abläufe?", impulse:"QM-Handbuch? SOPs? Checklisten?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
+  { id:"A3", block:"Struktur", text:"Werden Entscheidungen systematisch dokumentiert und nachvollziehbar gemacht?", impulse:"Protokolle? Datenbank?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB1.1"], dimension:"prozess", gewicht:1 },
+  { id:"A4", block:"Struktur", text:"Wird die Einhaltung der Standards regelmäßig kontrolliert?", impulse:"Audits? Stichproben? Frequenz?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"qualität", gewicht:2 },
+  { id:"A5", block:"Struktur", text:"Finden regelmäßige Teambesprechungen mit strukturierter Agenda statt?", impulse:"Frequenz? Protokoll? Teilnahme?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
 
   // BLOCK B – Personal
-  { id:"B1", block:"Personal", text:"Gibt es geregelte Verfahren für den Umgang mit Personalmangel?", rollen:["PDL","PFK"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
-  { id:"B2", block:"Personal", text:"Existieren verbindliche Vertretungsregelungen für alle Schlüsselpositionen?", rollen:["PDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:1 },
-  { id:"B3", block:"Personal", text:"Ist eine strukturierte Fortbildungsplanung etabliert?", rollen:["PDL","PFK"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
-  { id:"B4", block:"Personal", text:"Werden neue Mitarbeitende nach einem strukturierten Einarbeitungskonzept eingeführt?", rollen:["PDL","PFK"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"B5", block:"Personal", text:"Wird Überlastung frühzeitig erkannt und systematisch adressiert?", rollen:["PFK","Ungelernt"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"B1", block:"Personal", text:"Gibt es geregelte Verfahren für den Umgang mit Personalmangel?", impulse:"Springerpool? Leiharbeit? Verdichtung?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"B2", block:"Personal", text:"Existieren verbindliche Vertretungsregelungen für alle Schlüsselpositionen?", impulse:"Wer vertritt PDL? Schriftlich?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:1 },
+  { id:"B3", block:"Personal", text:"Ist eine strukturierte Fortbildungsplanung etabliert?", impulse:"Budget? Themen? Pflichtschulungen?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
+  { id:"B4", block:"Personal", text:"Werden neue Mitarbeitende nach einem strukturierten Einarbeitungskonzept eingeführt?", impulse:"Dauer? Mentoring? Checklisten?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
+  { id:"B5", block:"Personal", text:"Wird Überlastung frühzeitig erkannt und systematisch adressiert?", impulse:"Signale? Gespräche? Maßnahmen?", pflicht:true, rollen:["PFK_LG","PFK_ST","Ungelernt"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
 
   // BLOCK C – Tourenplanung
-  { id:"C1", block:"Touren", text:"Erfolgt die Tourenplanung nach transparenten und nachvollziehbaren Kriterien?", rollen:["PDL"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
-  { id:"C2", block:"Touren", text:"Sind Verspätungen bei der Leistungserbringung selten und systematisch erfasst?", rollen:["PFK"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
-  { id:"C3", block:"Touren", text:"Gibt es ein definiertes Ausfallmanagement mit klaren Eskalationsstufen?", rollen:["PDL","PFK"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
-  { id:"C4", block:"Touren", text:"Werden digitale Planungstools für die Tourenplanung eingesetzt?", rollen:["PDL"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
-  { id:"C5", block:"Touren", text:"Werden Tourenänderungen transparent und zeitnah kommuniziert?", rollen:["PFK"], qpr:["QB1.1"], dimension:"prozess", gewicht:1 },
+  { id:"C1", block:"Touren", text:"Erfolgt die Tourenplanung nach transparenten und nachvollziehbaren Kriterien?", impulse:"Welche Software? Algorithmus?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
+  { id:"C2", block:"Touren", text:"Sind Verspätungen bei der Leistungserbringung selten und systematisch erfasst?", impulse:"Abweichungen? Häufigkeit?", pflicht:true, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
+  { id:"C3", block:"Touren", text:"Gibt es ein definiertes Ausfallmanagement mit klaren Eskalationsstufen?", impulse:"Rufbereitschaft? Verdichtung?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
+  { id:"C4", block:"Touren", text:"Werden digitale Planungstools für die Tourenplanung eingesetzt?", impulse:"Medifox? Vivendi? Zufriedenheit?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
+  { id:"C5", block:"Touren", text:"Werden Tourenänderungen transparent und zeitnah kommuniziert?", impulse:"Push-Nachricht? Anruf? Verzögerung?", pflicht:false, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.1"], dimension:"prozess", gewicht:1 },
 
   // BLOCK D – Qualität & Risiko
-  { id:"D1", block:"Qualität", text:"Ist ein systematisches Risikomanagement mit Erfassung und Nachverfolgung dokumentiert?", rollen:["PDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
-  { id:"D2", block:"Qualität", text:"Existiert ein strukturiertes Beschwerdemanagement mit Maßnahmenableitung?", rollen:["PDL"], qpr:["QB1.3"], dimension:"qualität", gewicht:2 },
-  { id:"D3", block:"Qualität", text:"Wird die Pflegeplanung regelmäßig überprüft und an den aktuellen Bedarf angepasst?", rollen:["PFK"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
-  { id:"D4", block:"Qualität", text:"Werden Qualitätskennzahlen systematisch erhoben und ausgewertet?", rollen:["PDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"D5", block:"Qualität", text:"Werden interne Audits oder Qualitätsprüfungen regelmäßig durchgeführt?", rollen:["PDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
+  { id:"D1", block:"Qualität", text:"Ist ein systematisches Risikomanagement mit Erfassung und Nachverfolgung dokumentiert?", impulse:"Sturz? Dekubitus? Schmerz?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
+  { id:"D2", block:"Qualität", text:"Existiert ein strukturiertes Beschwerdemanagement mit Maßnahmenableitung?", impulse:"Zentral? Häufigste Themen?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.3"], dimension:"qualität", gewicht:2 },
+  { id:"D3", block:"Qualität", text:"Wird die Pflegeplanung regelmäßig überprüft und an den aktuellen Bedarf angepasst?", impulse:"Frequenz? Wer prüft?", pflicht:true, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
+  { id:"D4", block:"Qualität", text:"Werden Qualitätskennzahlen systematisch erhoben und ausgewertet?", impulse:"Welche KPIs? Monatlich?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
+  { id:"D5", block:"Qualität", text:"Werden interne Audits oder Qualitätsprüfungen regelmäßig durchgeführt?", impulse:"Frequenz? Konsequenzen?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
 
   // BLOCK E – Dokumentation
-  { id:"E1", block:"Dokumentation", text:"Ist die Pflegedokumentation vollständig und nachvollziehbar geführt?", rollen:["PFK"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
-  { id:"E2", block:"Dokumentation", text:"Erfolgt die Dokumentation zeitnah (am selben Tag der Leistungserbringung)?", rollen:["PFK"], qpr:["QB1.2"], dimension:"prozess", gewicht:2 },
-  { id:"E3", block:"Dokumentation", text:"Wird ein digitales Dokumentationssystem eingesetzt?", rollen:["PDL","PFK"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
-  { id:"E4", block:"Dokumentation", text:"Bestehen Schnittstellen zu Abrechnungs- und Verwaltungssystemen?", rollen:["PDL"], qpr:["QB1.2"], dimension:"digital", gewicht:1 },
-  { id:"E5", block:"Dokumentation", text:"Ist ein umfassendes Datenschutzkonzept implementiert und geschult?", rollen:["PDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:1 },
+  { id:"E1", block:"Dokumentation", text:"Ist die Pflegedokumentation vollständig und nachvollziehbar geführt?", impulse:"SIS? Maßnahmenplan? Evaluation?", pflicht:true, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
+  { id:"E2", block:"Dokumentation", text:"Erfolgt die Dokumentation zeitnah (am selben Tag der Leistungserbringung)?", impulse:"Sofort? Abends? Nächster Tag?", pflicht:true, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"prozess", gewicht:2 },
+  { id:"E3", block:"Dokumentation", text:"Wird ein digitales Dokumentationssystem eingesetzt?", impulse:"Welches? Zufriedenheit 1-5?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
+  { id:"E4", block:"Dokumentation", text:"Bestehen Schnittstellen zu Abrechnungs- und Verwaltungssystemen?", impulse:"Automatisch? Manuell?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"digital", gewicht:1 },
+  { id:"E5", block:"Dokumentation", text:"Ist ein umfassendes Datenschutzkonzept implementiert und geschult?", impulse:"DSGVO? Schulungen?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:1 },
 
   // BLOCK F – Digitalisierung
-  { id:"F1", block:"Digitalisierung", text:"Sind mobile Endgeräte für die Pflege im Einsatz und funktional?", rollen:["PDL","PFK"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
-  { id:"F2", block:"Digitalisierung", text:"Werden KPIs digital ausgewertet und für Steuerungsentscheidungen genutzt?", rollen:["PDL"], qpr:["QB3.1"], dimension:"digital", gewicht:2 },
-  { id:"F3", block:"Digitalisierung", text:"Sind Mitarbeitende für die Nutzung digitaler Tools geschult?", rollen:["PDL"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
-  { id:"F4", block:"Digitalisierung", text:"Ist digitale Kommunikation (z.B. Messenger, Intranet) im Alltag etabliert?", rollen:["PDL","PFK"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
-  { id:"F5", block:"Digitalisierung", text:"Ist die Akzeptanz digitaler Tools bei den Mitarbeitenden hoch?", rollen:["PFK","Ungelernt"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
+  { id:"F1", block:"Digitalisierung", text:"Sind mobile Endgeräte für die Pflege im Einsatz und funktional?", impulse:"Smartphone? Tablet? Akku?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
+  { id:"F2", block:"Digitalisierung", text:"Werden KPIs digital ausgewertet und für Steuerungsentscheidungen genutzt?", impulse:"Dashboard? Berichte?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"digital", gewicht:2 },
+  { id:"F3", block:"Digitalisierung", text:"Sind Mitarbeitende für die Nutzung digitaler Tools geschult?", impulse:"Frequenz? Zufriedenheit?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
+  { id:"F4", block:"Digitalisierung", text:"Ist digitale Kommunikation (z.B. Messenger, Intranet) im Alltag etabliert?", impulse:"Welche Kanäle? Akzeptanz?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
+  { id:"F5", block:"Digitalisierung", text:"Ist die Akzeptanz digitaler Tools bei den Mitarbeitenden hoch?", impulse:"Widerstand? Generationsunterschied?", pflicht:false, rollen:["PFK_LG","PFK_ST","Ungelernt"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
 
   // BLOCK G – Steuerung
-  { id:"G1", block:"Steuerung", text:"Werden Kennzahlen regelmäßig (mind. monatlich) analysiert?", rollen:["PDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"G2", block:"Steuerung", text:"Werden aus Kennzahlenanalysen systematisch Maßnahmen abgeleitet?", rollen:["PDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"G3", block:"Steuerung", text:"Wird die Wirtschaftlichkeit des Betriebs regelmäßig überwacht?", rollen:["PDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
-  { id:"G4", block:"Steuerung", text:"Wird der zukünftige Personalbedarf systematisch prognostiziert?", rollen:["PDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
-  { id:"G5", block:"Steuerung", text:"Existiert eine dokumentierte strategische Planung?", rollen:["PDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
+  { id:"G1", block:"Steuerung", text:"Werden Kennzahlen regelmäßig (mind. monatlich) analysiert?", impulse:"Welche KPIs? Wer analysiert?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
+  { id:"G2", block:"Steuerung", text:"Werden aus Kennzahlenanalysen systematisch Maßnahmen abgeleitet?", impulse:"PDCA? Verantwortliche?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
+  { id:"G3", block:"Steuerung", text:"Wird die Wirtschaftlichkeit des Betriebs regelmäßig überwacht?", impulse:"Deckungsbeitrag? Break-Even?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"G4", block:"Steuerung", text:"Wird der zukünftige Personalbedarf systematisch prognostiziert?", impulse:"Demografisch? Szenarioplanung?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"G5", block:"Steuerung", text:"Existiert eine dokumentierte strategische Planung?", impulse:"Zeithorizont? Vision? Ziele?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
 
   // BLOCK H – Zukunft & Entwicklung
-  { id:"H1", block:"Zukunft", text:"Liegt eine schriftliche Digitalisierungsstrategie vor?", rollen:["PDL"], qpr:["QB3.1"], dimension:"digital", gewicht:2 },
-  { id:"H2", block:"Zukunft", text:"Ist eine Wachstums- oder Konsolidierungsstrategie definiert?", rollen:["PDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:1 },
-  { id:"H3", block:"Zukunft", text:"Besteht eine hohe Innovationsbereitschaft im Team?", rollen:["PDL","PFK"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
-  { id:"H4", block:"Zukunft", text:"Werden externe Kooperationen systematisch genutzt?", rollen:["PDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
-  { id:"H5", block:"Zukunft", text:"Existiert eine langfristige Personalentwicklungsplanung?", rollen:["PDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"H1", block:"Zukunft", text:"Liegt eine schriftliche Digitalisierungsstrategie vor?", impulse:"Budget? Roadmap? Meilensteine?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"digital", gewicht:2 },
+  { id:"H2", block:"Zukunft", text:"Ist eine Wachstums- oder Konsolidierungsstrategie definiert?", impulse:"Expansion? Spezialisierung?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:1 },
+  { id:"H3", block:"Zukunft", text:"Besteht eine hohe Innovationsbereitschaft im Team?", impulse:"Pilot-Projekte? Offenheit?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
+  { id:"H4", block:"Zukunft", text:"Werden externe Kooperationen systematisch genutzt?", impulse:"Netzwerke? Träger? Kassen?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
+  { id:"H5", block:"Zukunft", text:"Existiert eine langfristige Personalentwicklungsplanung?", impulse:"Nachfolge? Karrierepfade?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
 ];
 
 const BLOCKS = [...new Set(LEITFADEN.map(f => f.block))];
 const DIMENSIONEN = ["prozess", "ressource", "qualität", "digital"];
 const DIM_LABELS = { prozess: "Prozessstabilität", ressource: "Ressourcenlage", "qualität": "Qualitätsstruktur", digital: "Digitalisierungsgrad" };
 const DIM_COLORS = { prozess: "#3b82f6", ressource: "#f59e0b", "qualität": "#10b981", digital: "#8b5cf6" };
+
+// ============================================================================
+// AUTO-PARSING ENGINE
+// ============================================================================
+
+function parseTextForCodes(text) {
+  if (!text || text.length < 10) return [];
+  const lowerText = text.toLowerCase();
+  const suggestions = [];
+  CODEBUCH.forEach(code => {
+    if (!code.keywords) return;
+    let matchScore = 0;
+    const matchedKeywords = [];
+    code.keywords.forEach(kw => {
+      if (lowerText.includes(kw.toLowerCase())) { matchScore += 10; matchedKeywords.push(kw); }
+    });
+    if (matchScore > 0) {
+      const mentions = matchedKeywords.reduce((sum, kw) => sum + (text.match(new RegExp(kw, 'gi')) || []).length, 0);
+      matchScore += (mentions - matchedKeywords.length) * 5;
+      suggestions.push({ ...code, matchScore, matchedKeywords,
+        confidence: matchScore >= 20 ? 'Hoch' : matchScore >= 10 ? 'Mittel' : 'Niedrig',
+        confidenceColor: matchScore >= 20 ? '#10b981' : matchScore >= 10 ? '#f59e0b' : '#9ca3af',
+      });
+    }
+  });
+  return suggestions.sort((a, b) => b.matchScore - a.matchScore);
+}
 
 // ============================================================================
 // CORE ENGINES
@@ -842,7 +908,7 @@ function LeitfadenEngine({ answers, setAnswers }) {
 
   return (
     <>
-      <PageTitle title="Strukturierter Leitfaden" subtitle="40 Fragen · 8 Blöcke · Rollenbasiert · Likert-Skala 0–4" />
+      <PageTitle title="Strukturierter Leitfaden" subtitle="40 Fragen · 8 Blöcke · Rollenbasiert · Forced-Choice-Skala 1–4" />
 
       <Card style={{ marginBottom: 20 }}>
         <CardBody style={{ display: "flex", alignItems: "center", gap: 20 }}>
@@ -888,10 +954,14 @@ function LeitfadenEngine({ answers, setAnswers }) {
                   {q.id}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, color: "#111827", fontWeight: 500, marginBottom: 8, lineHeight: 1.5 }}>{q.text}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <div style={{ fontSize: 14, color: "#111827", fontWeight: 500, lineHeight: 1.5, flex: 1 }}>{q.text}</div>
+                    {q.pflicht && <Badge label="Pflicht" color="#92400e" bg="#fef3c7" />}
+                  </div>
+                  {q.impulse && <div style={{ fontSize: 12, color: "#6b7280", fontStyle: "italic", marginBottom: 8 }}>💡 {q.impulse}</div>}
                   <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
                     <div style={{ display: "flex", gap: 4 }}>
-                      {[0,1,2,3,4].map(v => (
+                      {[1,2,3,4].map(v => (
                         <button key={v} onClick={() => saveAnswer(q.id, v)} style={{
                           width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.2s",
                           background: val === v ? "#3b82f6" : "#f8fafc", color: val === v ? "#fff" : "#6b7280",
@@ -924,6 +994,19 @@ function LeitfadenEngine({ answers, setAnswers }) {
 function CodingModule({ interviews, codings, setCodings }) {
   const [selInterview, setSelInterview] = useState("");
   const [selRolle, setSelRolle] = useState("PDL");
+  const [autoSuggestions, setAutoSuggestions] = useState([]);
+
+  const selInt = interviews.find(i => i.id === selInterview);
+
+  // Auto-parse when interview is selected
+  useEffect(() => {
+    if (selInt) {
+      const suggestions = parseTextForCodes(selInt.text);
+      setAutoSuggestions(suggestions);
+    } else {
+      setAutoSuggestions([]);
+    }
+  }, [selInterview]);
 
   const addCoding = (codeId) => {
     setCodings([...codings, { id: crypto.randomUUID(), interviewId: selInterview, codeId, rolle: selRolle, date: new Date().toISOString() }]);
@@ -938,7 +1021,7 @@ function CodingModule({ interviews, codings, setCodings }) {
 
   return (
     <>
-      <PageTitle title="Codierung" subtitle="Deduktive Codierung der Interviewdaten nach Codebuch" />
+      <PageTitle title="Codierung" subtitle="Deduktive Codierung der Interviewdaten nach Codebuch (44 Codes)" />
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
         <div>
           <Card style={{ marginBottom: 16 }}>
@@ -948,6 +1031,31 @@ function CodingModule({ interviews, codings, setCodings }) {
               <Select label="Codier-Rolle" value={selRolle} onChange={e => setSelRolle(e.target.value)} options={ROLLEN} />
             </CardBody>
           </Card>
+
+          {/* Auto-Parse Suggestions */}
+          {autoSuggestions.length > 0 && (
+            <Card style={{ marginBottom: 16, border: "2px solid #6366f1" }}>
+              <CardHeader title="⚡ Auto-Vorschläge" subtitle={`${autoSuggestions.length} Codes per Keyword-Matching erkannt`} icon={Icons.Zap} />
+              <CardBody>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {autoSuggestions.slice(0, 12).map(sugg => (
+                    <button key={sugg.id} onClick={() => addCoding(sugg.id)}
+                      style={{
+                        padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        background: "#eef2ff", border: `1px solid ${sugg.confidenceColor}`, color: "#374151", transition: "all 0.2s",
+                      }}>
+                      <span style={{ color: "#6366f1", marginRight: 4 }}>{sugg.id}</span> {sugg.label}
+                      <span style={{ marginLeft: 6, fontSize: 10, color: sugg.confidenceColor, fontWeight: 700 }}>{sugg.confidence}</span>
+                      {sugg.matchedKeywords.length > 0 && (
+                        <span style={{ marginLeft: 4, fontSize: 9, color: "#9ca3af" }}>({sugg.matchedKeywords.join(", ")})</span>
+                      )}
+                      {codeFreq[sugg.id] && <span style={{ marginLeft: 6, background: "#3b82f6", color: "#fff", borderRadius: 4, padding: "1px 5px", fontSize: 10 }}>{codeFreq[sugg.id]}</span>}
+                    </button>
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
+          )}
 
           {kategorien.map(kat => (
             <Card key={kat} style={{ marginBottom: 12 }}>
@@ -1696,8 +1804,20 @@ function ExportModule({ data, onImport }) {
         <Card>
           <CardHeader title="Export" icon={Icons.Download} />
           <CardBody>
-            <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>Alle erfassten Daten als JSON-Datei herunterladen. Enthält Interviews, Codierungen, Leitfragen-Antworten und Organisationsdaten.</p>
-            <Btn onClick={download}><Icons.Download size={16} /> JSON exportieren</Btn>
+            <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>Alle erfassten Daten als JSON- oder CSV-Datei herunterladen.</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn onClick={download}><Icons.Download size={16} /> JSON exportieren</Btn>
+              <Btn variant="secondary" onClick={() => {
+                const headers = ["ID", "InterviewID", "CodeID", "Rolle", "Datum"];
+                const rows = (data.codings || []).map(c => [c.id, c.interviewId, c.codeId, c.rolle, c.date]);
+                const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url; a.download = `vera-codings-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                URL.revokeObjectURL(url);
+              }}><Icons.Download size={16} /> CSV (Codierungen)</Btn>
+            </div>
           </CardBody>
         </Card>
 
