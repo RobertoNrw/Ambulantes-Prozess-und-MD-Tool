@@ -73,67 +73,75 @@ const QPR_ASPEKTE = [
 ];
 
 const LEITFADEN = [
-  // BLOCK A – Struktur & Organisation
-  { id:"A1", block:"Struktur", text:"Sind Verantwortlichkeiten im Pflegedienst klar definiert und allen Mitarbeitenden bekannt?", impulse:"Organigramm? Stellenbeschreibungen?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"A2", block:"Struktur", text:"Existieren schriftlich fixierte Prozessstandards für die wichtigsten Abläufe?", impulse:"QM-Handbuch? SOPs? Checklisten?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
-  { id:"A3", block:"Struktur", text:"Werden Entscheidungen systematisch dokumentiert und nachvollziehbar gemacht?", impulse:"Protokolle? Datenbank?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB1.1"], dimension:"prozess", gewicht:1 },
-  { id:"A4", block:"Struktur", text:"Wird die Einhaltung der Standards regelmäßig kontrolliert?", impulse:"Audits? Stichproben? Frequenz?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"qualität", gewicht:2 },
-  { id:"A5", block:"Struktur", text:"Finden regelmäßige Teambesprechungen mit strukturierter Agenda statt?", impulse:"Frequenz? Protokoll? Teilnahme?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
+  // === BLOCK A – Struktur & Organisation ===
+  { id:"A1", block:"Struktur", text:"Sind Verantwortlichkeiten klar definiert und allen Mitarbeitenden bekannt?", impulse:"Organigramm? Stellenbeschreibungen?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
+  { id:"A2", block:"Struktur", text:"Existieren schriftliche Prozessstandards (SOPs) für Kernabläufe?", impulse:"QM-Handbuch? Checklisten?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
+  { id:"A3", block:"Struktur", text:"Finden regelmäßige Teambesprechungen mit Agenda und Protokoll statt?", impulse:"Frequenz? Wer moderiert? Teilnahme?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
 
-  // BLOCK B – Personal
+  // === BLOCK B – Personal & Ressourcen ===
   { id:"B1", block:"Personal", text:"Gibt es geregelte Verfahren für den Umgang mit Personalmangel?", impulse:"Springerpool? Leiharbeit? Verdichtung?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
-  { id:"B2", block:"Personal", text:"Existieren verbindliche Vertretungsregelungen für alle Schlüsselpositionen?", impulse:"Wer vertritt PDL? Schriftlich?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:1 },
-  { id:"B3", block:"Personal", text:"Ist eine strukturierte Fortbildungsplanung etabliert?", impulse:"Budget? Themen? Pflichtschulungen?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
-  { id:"B4", block:"Personal", text:"Werden neue Mitarbeitende nach einem strukturierten Einarbeitungskonzept eingeführt?", impulse:"Dauer? Mentoring? Checklisten?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"B5", block:"Personal", text:"Wird Überlastung frühzeitig erkannt und systematisch adressiert?", impulse:"Signale? Gespräche? Maßnahmen?", pflicht:true, rollen:["PFK_LG","PFK_ST","Ungelernt"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"B2", block:"Personal", text:"Existieren verbindliche Vertretungsregelungen für Schlüsselpositionen?", impulse:"Wer vertritt PDL? Schriftlich fixiert?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"B3", block:"Personal", text:"Werden neue Mitarbeitende nach strukturiertem Konzept eingearbeitet?", impulse:"Dauer? Mentoring? Checklisten?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
+  { id:"B4", block:"Personal", text:"Wird Überlastung frühzeitig erkannt und systematisch adressiert?", impulse:"Signale? Gespräche? Maßnahmen?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"B5", block:"Personal", text:"Wie hoch ist das aktuelle Stresslevel im Arbeitsalltag?", impulse:"Top-3 Stressoren benennen", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"B6", block:"Personal", text:"Ist eine strukturierte Fortbildungsplanung etabliert?", impulse:"Budget? Themen? Pflichtschulungen?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
 
-  // BLOCK C – Tourenplanung
-  { id:"C1", block:"Touren", text:"Erfolgt die Tourenplanung nach transparenten und nachvollziehbaren Kriterien?", impulse:"Welche Software? Algorithmus?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
-  { id:"C2", block:"Touren", text:"Sind Verspätungen bei der Leistungserbringung selten und systematisch erfasst?", impulse:"Abweichungen? Häufigkeit?", pflicht:true, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
-  { id:"C3", block:"Touren", text:"Gibt es ein definiertes Ausfallmanagement mit klaren Eskalationsstufen?", impulse:"Rufbereitschaft? Verdichtung?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
-  { id:"C4", block:"Touren", text:"Werden digitale Planungstools für die Tourenplanung eingesetzt?", impulse:"Medifox? Vivendi? Zufriedenheit?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
-  { id:"C5", block:"Touren", text:"Werden Tourenänderungen transparent und zeitnah kommuniziert?", impulse:"Push-Nachricht? Anruf? Verzögerung?", pflicht:false, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.1"], dimension:"prozess", gewicht:1 },
+  // === BLOCK C – Tourenplanung & Versorgung ===
+  { id:"C1", block:"Touren", text:"Erfolgt die Tourenplanung nach transparenten und nachvollziehbaren Kriterien?", impulse:"Welche Software? Planungslogik?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
+  { id:"C2", block:"Touren", text:"Sind Verspätungen selten und werden systematisch erfasst?", impulse:"Häufigkeit? Abweichungsprotokoll?", pflicht:true, rollen:["PFK_LG","PFK_ST","Ungelernt"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
+  { id:"C3", block:"Touren", text:"Gibt es ein definiertes Ausfallmanagement mit Eskalationsstufen?", impulse:"Rufbereitschaft? Verdichtung? Springer?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB1.1"], dimension:"prozess", gewicht:2 },
+  { id:"C4", block:"Touren", text:"Wie hoch ist die Bezugspflege-Kontinuität bei Stammkunden?", impulse:"Quote? Wechselhäufigkeit pro Woche?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB1.1"], dimension:"prozess", gewicht:1 },
+  { id:"C5", block:"Touren", text:"Werden Ablehnungen von Versorgungsanfragen systematisch erfasst?", impulse:"Häufigkeit? Gründe? Meldung an Landespflegeausschuss?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB1.3"], dimension:"prozess", gewicht:1 },
 
-  // BLOCK D – Qualität & Risiko
-  { id:"D1", block:"Qualität", text:"Ist ein systematisches Risikomanagement mit Erfassung und Nachverfolgung dokumentiert?", impulse:"Sturz? Dekubitus? Schmerz?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
-  { id:"D2", block:"Qualität", text:"Existiert ein strukturiertes Beschwerdemanagement mit Maßnahmenableitung?", impulse:"Zentral? Häufigste Themen?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.3"], dimension:"qualität", gewicht:2 },
-  { id:"D3", block:"Qualität", text:"Wird die Pflegeplanung regelmäßig überprüft und an den aktuellen Bedarf angepasst?", impulse:"Frequenz? Wer prüft?", pflicht:true, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
-  { id:"D4", block:"Qualität", text:"Werden Qualitätskennzahlen systematisch erhoben und ausgewertet?", impulse:"Welche KPIs? Monatlich?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"D5", block:"Qualität", text:"Werden interne Audits oder Qualitätsprüfungen regelmäßig durchgeführt?", impulse:"Frequenz? Konsequenzen?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
+  // === BLOCK D – Qualität & Risiko ===
+  { id:"D1", block:"Qualität", text:"Ist ein systematisches Risikomanagement dokumentiert und aktiv?", impulse:"Sturz? Dekubitus? Schmerz? Aktualisierung?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
+  { id:"D2", block:"Qualität", text:"Existiert ein strukturiertes Beschwerdemanagement?", impulse:"Zentral? Häufigste Themen? Reaktionszeit?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB1.3"], dimension:"qualität", gewicht:2 },
+  { id:"D3", block:"Qualität", text:"Wird die Pflegeplanung regelmäßig überprüft und angepasst?", impulse:"Frequenz? Wer prüft? SIS aktuell?", pflicht:true, rollen:["PFK_LG","PFK_ST","Ungelernt"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
+  { id:"D4", block:"Qualität", text:"Werden Qualitätskennzahlen systematisch erhoben und ausgewertet?", impulse:"Welche KPIs? Monatlich? PDCA?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
+  { id:"D5", block:"Qualität", text:"Wie sicher fühlen Sie sich bei der täglichen Leistungserbringung?", impulse:"Medikamente? Wundversorgung? Hilfsmittel?", pflicht:true, rollen:["PFK_LG","PFK_ST","Ungelernt"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
 
-  // BLOCK E – Dokumentation
-  { id:"E1", block:"Dokumentation", text:"Ist die Pflegedokumentation vollständig und nachvollziehbar geführt?", impulse:"SIS? Maßnahmenplan? Evaluation?", pflicht:true, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
-  { id:"E2", block:"Dokumentation", text:"Erfolgt die Dokumentation zeitnah (am selben Tag der Leistungserbringung)?", impulse:"Sofort? Abends? Nächster Tag?", pflicht:true, rollen:["PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"prozess", gewicht:2 },
-  { id:"E3", block:"Dokumentation", text:"Wird ein digitales Dokumentationssystem eingesetzt?", impulse:"Welches? Zufriedenheit 1-5?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
-  { id:"E4", block:"Dokumentation", text:"Bestehen Schnittstellen zu Abrechnungs- und Verwaltungssystemen?", impulse:"Automatisch? Manuell?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"digital", gewicht:1 },
-  { id:"E5", block:"Dokumentation", text:"Ist ein umfassendes Datenschutzkonzept implementiert und geschult?", impulse:"DSGVO? Schulungen?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB1.2"], dimension:"qualität", gewicht:1 },
+  // === BLOCK E – Dokumentation ===
+  { id:"E1", block:"Dokumentation", text:"Ist die Pflegedokumentation vollständig und nachvollziehbar?", impulse:"SIS? Maßnahmenplan? Evaluation?", pflicht:true, rollen:["PFK_LG","PFK_ST","Ungelernt"], qpr:["QB1.2"], dimension:"qualität", gewicht:2 },
+  { id:"E2", block:"Dokumentation", text:"Erfolgt die Dokumentation zeitnah am selben Tag?", impulse:"Sofort vor Ort? Abends? Nächster Tag?", pflicht:true, rollen:["PFK_LG","PFK_ST","Ungelernt"], qpr:["QB1.2"], dimension:"prozess", gewicht:2 },
+  { id:"E3", block:"Dokumentation", text:"Wird ein digitales Dokumentationssystem eingesetzt und akzeptiert?", impulse:"Welches System? Zufriedenheit?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
 
-  // BLOCK F – Digitalisierung
-  { id:"F1", block:"Digitalisierung", text:"Sind mobile Endgeräte für die Pflege im Einsatz und funktional?", impulse:"Smartphone? Tablet? Akku?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
-  { id:"F2", block:"Digitalisierung", text:"Werden KPIs digital ausgewertet und für Steuerungsentscheidungen genutzt?", impulse:"Dashboard? Berichte?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"digital", gewicht:2 },
-  { id:"F3", block:"Digitalisierung", text:"Sind Mitarbeitende für die Nutzung digitaler Tools geschult?", impulse:"Frequenz? Zufriedenheit?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
-  { id:"F4", block:"Digitalisierung", text:"Ist digitale Kommunikation (z.B. Messenger, Intranet) im Alltag etabliert?", impulse:"Welche Kanäle? Akzeptanz?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
-  { id:"F5", block:"Digitalisierung", text:"Ist die Akzeptanz digitaler Tools bei den Mitarbeitenden hoch?", impulse:"Widerstand? Generationsunterschied?", pflicht:false, rollen:["PFK_LG","PFK_ST","Ungelernt"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
+  // === BLOCK F – Digitalisierung ===
+  { id:"F1", block:"Digitalisierung", text:"Sind mobile Endgeräte im Einsatz und funktional?", impulse:"Smartphone? Tablet? Akkulaufzeit?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB1.2"], dimension:"digital", gewicht:2 },
+  { id:"F2", block:"Digitalisierung", text:"Werden KPIs digital ausgewertet und für Steuerung genutzt?", impulse:"Dashboard? Automatische Berichte?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"digital", gewicht:2 },
+  { id:"F3", block:"Digitalisierung", text:"Ist die Akzeptanz digitaler Tools bei Mitarbeitenden hoch?", impulse:"Widerstand? Generationsunterschied? Schulungsbedarf?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
+  { id:"F4", block:"Digitalisierung", text:"Ist digitale Kommunikation (Messenger/Intranet) etabliert?", impulse:"Welche Kanäle? Nutzungsquote?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
 
-  // BLOCK G – Steuerung
-  { id:"G1", block:"Steuerung", text:"Werden Kennzahlen regelmäßig (mind. monatlich) analysiert?", impulse:"Welche KPIs? Wer analysiert?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"G2", block:"Steuerung", text:"Werden aus Kennzahlenanalysen systematisch Maßnahmen abgeleitet?", impulse:"PDCA? Verantwortliche?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
-  { id:"G3", block:"Steuerung", text:"Wird die Wirtschaftlichkeit des Betriebs regelmäßig überwacht?", impulse:"Deckungsbeitrag? Break-Even?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
-  { id:"G4", block:"Steuerung", text:"Wird der zukünftige Personalbedarf systematisch prognostiziert?", impulse:"Demografisch? Szenarioplanung?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
-  { id:"G5", block:"Steuerung", text:"Existiert eine dokumentierte strategische Planung?", impulse:"Zeithorizont? Vision? Ziele?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
+  // === BLOCK G – Steuerung & Wirtschaft ===
+  { id:"G1", block:"Steuerung", text:"Werden betriebswirtschaftliche Kennzahlen regelmäßig analysiert?", impulse:"Welche KPIs? Monatlich? Wer analysiert?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:2 },
+  { id:"G2", block:"Steuerung", text:"Wird die Wirtschaftlichkeit des Betriebs aktiv überwacht?", impulse:"Deckungsbeitrag? Vergütungssätze? Break-Even?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
 
-  // BLOCK H – Zukunft & Entwicklung
-  { id:"H1", block:"Zukunft", text:"Liegt eine schriftliche Digitalisierungsstrategie vor?", impulse:"Budget? Roadmap? Meilensteine?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"digital", gewicht:2 },
-  { id:"H2", block:"Zukunft", text:"Ist eine Wachstums- oder Konsolidierungsstrategie definiert?", impulse:"Expansion? Spezialisierung?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:1 },
-  { id:"H3", block:"Zukunft", text:"Besteht eine hohe Innovationsbereitschaft im Team?", impulse:"Pilot-Projekte? Offenheit?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB3.1"], dimension:"digital", gewicht:1 },
-  { id:"H4", block:"Zukunft", text:"Werden externe Kooperationen systematisch genutzt?", impulse:"Netzwerke? Träger? Kassen?", pflicht:false, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
-  { id:"H5", block:"Zukunft", text:"Existiert eine langfristige Personalentwicklungsplanung?", impulse:"Nachfolge? Karrierepfade?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  // === BLOCK H – Zukunft & Kooperation ===
+  { id:"H1", block:"Zukunft", text:"Liegt eine schriftliche Digitalisierungsstrategie vor?", impulse:"Roadmap? Budget? Meilensteine?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB3.1"], dimension:"digital", gewicht:2 },
+  { id:"H2", block:"Zukunft", text:"Bestehen funktionierende externe Kooperationen?", impulse:"Ärzte? Apotheken? Netzwerke? Träger?", pflicht:false, rollen:["PDL","stvPDL","PFK_LG","PFK_ST"], qpr:["QB1.3"], dimension:"qualität", gewicht:1 },
+  { id:"H3", block:"Zukunft", text:"Existiert eine langfristige Personalentwicklungsplanung?", impulse:"Nachfolge? Karrierepfade? Förderung?", pflicht:true, rollen:["PDL","stvPDL"], qpr:["QB5.3"], dimension:"ressource", gewicht:2 },
+  { id:"H4", block:"Zukunft", text:"Welche konkreten Verbesserungsideen haben Sie?", impulse:"Sofort umsetzbar vs. langfristig? Priorisierung?", pflicht:true, rollen:["PDL","stvPDL","PFK_LG","PFK_ST","Ungelernt"], qpr:["QB3.1"], dimension:"qualität", gewicht:1 },
 ];
+
 
 const BLOCKS = [...new Set(LEITFADEN.map(f => f.block))];
 const DIMENSIONEN = ["prozess", "ressource", "qualität", "digital"];
 const DIM_LABELS = { prozess: "Prozessstabilität", ressource: "Ressourcenlage", "qualität": "Qualitätsstruktur", digital: "Digitalisierungsgrad" };
 const DIM_COLORS = { prozess: "#3b82f6", ressource: "#f59e0b", "qualität": "#10b981", digital: "#8b5cf6" };
+
+/**
+ * Selektiert exakt 20 Fragen für eine Rolle.
+ * Priorisierung: 1) Pflichtfragen, 2) höheres Gewicht, 3) Dimensionsbalance
+ * Bei < 20 verfügbaren Fragen: alle zurückgeben
+ */
+function getQuestionsForRole(role) {
+  const available = LEITFADEN.filter(q => q.rollen.includes(role));
+  if (available.length <= 20) return available;
+  const sorted = [...available].sort((a, b) => {
+    if (a.pflicht !== b.pflicht) return a.pflicht ? -1 : 1;
+    return b.gewicht - a.gewicht;
+  });
+  return sorted.slice(0, 20);
+}
 
 // ============================================================================
 // AUTO-PARSING ENGINE
@@ -384,7 +392,7 @@ function sensitivitaetsanalyse(answers, baseWeights = [0.25, 0.25, 0.25, 0.25], 
 function berechneDatenqualitaet(interviews, codings, answers) {
   let score = 0;
   const answeredCount = Object.values(answers).filter(v => v > 0).length;
-  const answerRate = Math.min(1, answeredCount / 40);
+  const answerRate = Math.min(1, answeredCount / LEITFADEN.length);
   score += answerRate * 35;
   const interviewScore = Math.min(1, interviews.length / 6);
   score += interviewScore * 25;
@@ -567,7 +575,7 @@ export default function VeRABI() {
       {/* Main Content */}
       <main style={{ flex: 1, overflowY: "auto", padding: "32px 40px" }}>
         {activeModule === "dashboard" && <DashboardModule dimScores={dimScores} orgScore={orgScore} orgAmpel={orgAmpel} qprScores={qprScores} answers={answers} interviews={interviews} codings={codings} evidenceCoverage={evidenceCoverage} />}
-        {activeModule === "interviews" && <InterviewModule interviews={interviews} setInterviews={setInterviewsP} />}
+        {activeModule === "interviews" && <InterviewModule interviews={interviews} setInterviews={setInterviewsP} answers={answers} setAnswers={setAnswersP} />}
         {activeModule === "leitfaden" && <LeitfadenEngine answers={answers} setAnswers={setAnswersP} />}
         {activeModule === "coding" && <CodingModule interviews={interviews} codings={codings} setCodings={setCodingsP} />}
         {activeModule === "audit" && <AuditModule qprScores={qprScores} evidenceCoverage={evidenceCoverage} codings={codings} dimScores={dimScores} orgScore={orgScore} />}
@@ -782,7 +790,7 @@ function DashboardModule({ dimScores, orgScore, orgAmpel, qprScores, answers, in
         <StatCard label="Org-Score" value={`${orgScore}%`} sub={orgAmpel.label} color={orgAmpel.color} />
         <StatCard label="Interviews" value={interviews.length} sub="durchgeführt" />
         <StatCard label="Codierungen" value={codings.length} sub="erfasst" />
-        <StatCard label="Leitfragen" value={`${answeredCount}/40`} sub="beantwortet" />
+        <StatCard label="Leitfragen" value={`${answeredCount}/${LEITFADEN.length}`} sub="beantwortet" />
         <StatCard label="QPR-Evidenz" value={`${evidenceCoverage}%`} sub="Abdeckung" color={ampel(evidenceCoverage).color} />
       </div>
 
@@ -842,54 +850,255 @@ function DashboardModule({ dimScores, orgScore, orgAmpel, qprScores, answers, in
 // INTERVIEW MODULE
 // ============================================================================
 
-function InterviewModule({ interviews, setInterviews }) {
+function InterviewModule({ interviews, setInterviews, answers, setAnswers }) {
+  const [mode, setMode] = useState("list"); // list | new | conduct
   const [role, setRole] = useState("PDL");
-  const [text, setText] = useState("");
+  const [interviewName, setInterviewName] = useState("");
+  const [activeInterviewId, setActiveInterviewId] = useState(null);
+  const [currentQIdx, setCurrentQIdx] = useState(0);
 
-  const save = () => {
-    if (!text.trim()) return;
-    setInterviews([...interviews, { id: crypto.randomUUID(), role, text: text.trim(), date: new Date().toISOString() }]);
-    setText("");
+  const activeInterview = interviews.find(i => i.id === activeInterviewId);
+  const activeQuestions = useMemo(() => activeInterview ? getQuestionsForRole(activeInterview.role) : [], [activeInterviewId, interviews]);
+
+  const createInterview = () => {
+    if (!interviewName.trim()) return;
+    const newInt = {
+      id: crypto.randomUUID(), role, name: interviewName.trim(),
+      antworten: {}, date: new Date().toISOString(), completed: false,
+    };
+    setInterviews([...interviews, newInt]);
+    setActiveInterviewId(newInt.id);
+    setCurrentQIdx(0);
+    setInterviewName("");
+    setMode("conduct");
   };
 
-  const remove = (id) => setInterviews(interviews.filter(i => i.id !== id));
+  const saveFreitext = (frageId, text) => {
+    setInterviews(interviews.map(i => i.id === activeInterviewId
+      ? { ...i, antworten: { ...i.antworten, [frageId]: text } }
+      : i
+    ));
+  };
 
-  return (
-    <>
-      <PageTitle title="Interviews" subtitle="Qualitative Interviewdaten erfassen und verwalten" />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <Card>
-          <CardHeader title="Neues Interview" icon={Icons.Users} />
-          <CardBody>
-            <Select label="Rolle" value={role} onChange={e => setRole(e.target.value)} options={ROLLEN} />
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4 }}>Interviewtext / Notizen</label>
-              <textarea value={text} onChange={e => setText(e.target.value)} rows={8} placeholder="Interviewinhalt hier eingeben..."
-                style={{ width: "100%", padding: "12px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }} />
+  const saveLikert = (frageId, val) => {
+    setAnswers({ ...answers, [frageId]: val });
+  };
+
+  const completeInterview = () => {
+    setInterviews(interviews.map(i => i.id === activeInterviewId ? { ...i, completed: true } : i));
+    setMode("list");
+    setActiveInterviewId(null);
+  };
+
+  const removeInterview = (id) => {
+    setInterviews(interviews.filter(i => i.id !== id));
+  };
+
+  const openInterview = (id) => {
+    setActiveInterviewId(id);
+    setCurrentQIdx(0);
+    setMode("conduct");
+  };
+
+  // ─── LIST VIEW ───
+  if (mode === "list") {
+    const completed = interviews.filter(i => i.completed).length;
+    return (
+      <>
+        <PageTitle title="Interviews" subtitle={`${interviews.length} angelegt · ${completed} abgeschlossen · Rollenbasiert je 20 Fragen`} />
+        <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+          <Btn onClick={() => setMode("new")}><Icons.Users size={16} /> Neues Interview anlegen</Btn>
+        </div>
+
+        {interviews.length === 0 && (
+          <Card><CardBody>
+            <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>
+              <Icons.Users size={48} style={{ marginBottom: 12, opacity: 0.3 }} />
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Noch keine Interviews</div>
+              <div style={{ fontSize: 13 }}>Legen Sie ein Interview an. Pro Rolle werden automatisch 20 passende Fragen generiert.</div>
             </div>
-            <Btn onClick={save}><Icons.Check size={16} /> Speichern</Btn>
+          </CardBody></Card>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+          {interviews.map(i => {
+            const qs = getQuestionsForRole(i.role);
+            const textAnswered = qs.filter(q => i.antworten?.[q.id]?.trim()).length;
+            const likertAnswered = qs.filter(q => (answers[q.id] || 0) > 0).length;
+            const pct = qs.length > 0 ? Math.round((Math.min(textAnswered, likertAnswered) / qs.length) * 100) : 0;
+            return (
+              <Card key={i.id}>
+                <CardBody>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>{i.name}</div>
+                      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{new Date(i.date).toLocaleDateString("de-DE")}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <Badge label={i.role} color="#3b82f6" bg="#eff6ff" />
+                      {i.completed && <Badge label="✓" color="#059669" bg="#ecfdf5" />}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Text: {textAnswered}/{qs.length} · Likert: {likertAnswered}/{qs.length}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <div style={{ flex: 1, height: 6, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: i.completed ? "#10b981" : "#3b82f6", borderRadius: 3, transition: "width 0.3s" }} />
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7280" }}>{pct}%</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Btn variant="secondary" onClick={() => openInterview(i.id)} style={{ flex: 1, justifyContent: "center" }}>{i.completed ? "Ansehen/Bearbeiten" : "Fortsetzen"}</Btn>
+                    <Btn variant="danger" onClick={() => removeInterview(i.id)}>✕</Btn>
+                  </div>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
+  // ─── NEW INTERVIEW ───
+  if (mode === "new") {
+    const previewQs = getQuestionsForRole(role);
+    return (
+      <>
+        <PageTitle title="Neues Interview anlegen" subtitle="Rolle wählen → 20 Fragen werden automatisch zugewiesen" />
+        <Card style={{ maxWidth: 520 }}>
+          <CardBody>
+            <Input label="Bezeichnung" value={interviewName} onChange={e => setInterviewName(e.target.value)} placeholder="z.B. PDL Standort Bochum-Mitte" />
+            <Select label="Rolle" value={role} onChange={e => setRole(e.target.value)} options={ROLLEN} />
+            <div style={{ padding: 12, background: "#f8fafc", borderRadius: 8, marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>{previewQs.length} Fragen für Rolle „{role}"</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {DIMENSIONEN.map(d => {
+                  const count = previewQs.filter(q => q.dimension === d).length;
+                  return count > 0 ? <Badge key={d} label={`${DIM_LABELS[d]}: ${count}`} color={DIM_COLORS[d]} bg="#f8fafc" /> : null;
+                })}
+              </div>
+              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>{previewQs.filter(q => q.pflicht).length} Pflicht, {previewQs.filter(q => !q.pflicht).length} optional</div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn onClick={createInterview} disabled={!interviewName.trim()}>Interview starten</Btn>
+              <Btn variant="secondary" onClick={() => setMode("list")}>Abbrechen</Btn>
+            </div>
+          </CardBody>
+        </Card>
+      </>
+    );
+  }
+
+  // ─── CONDUCT INTERVIEW ───
+  if (mode === "conduct" && activeInterview && activeQuestions.length > 0) {
+    const q = activeQuestions[currentQIdx];
+    const freitext = activeInterview.antworten?.[q.id] || "";
+    const likert = answers[q.id] || 0;
+    const totalComplete = activeQuestions.filter(qq => (activeInterview.antworten?.[qq.id]?.trim()) && (answers[qq.id] || 0) > 0).length;
+    const progress = Math.round((totalComplete / activeQuestions.length) * 100);
+    const qAmpel = ampel(likert * 25);
+
+    return (
+      <>
+        <PageTitle title={activeInterview.name} subtitle={`${activeInterview.role} · Frage ${currentQIdx + 1}/${activeQuestions.length}`} />
+
+        {/* Progress */}
+        <Card style={{ marginBottom: 16 }}>
+          <CardBody style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 24px" }}>
+            <Badge label={activeInterview.role} color="#3b82f6" bg="#eff6ff" />
+            <div style={{ flex: 1 }}>
+              <div style={{ height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${progress}%`, background: progress === 100 ? "#10b981" : "#3b82f6", borderRadius: 4, transition: "width 0.3s" }} />
+              </div>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280" }}>{totalComplete}/{activeQuestions.length}</span>
           </CardBody>
         </Card>
 
+        {/* Question navigation dots */}
+        <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" }}>
+          {activeQuestions.map((qq, idx) => {
+            const hasText = !!activeInterview.antworten?.[qq.id]?.trim();
+            const hasLikert = (answers[qq.id] || 0) > 0;
+            const complete = hasText && hasLikert;
+            return (
+              <button key={qq.id} onClick={() => setCurrentQIdx(idx)} style={{
+                width: 32, height: 32, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                background: idx === currentQIdx ? "#3b82f6" : complete ? "#10b981" : hasText || hasLikert ? "#fbbf24" : "#f1f5f9",
+                color: idx === currentQIdx || complete || hasText || hasLikert ? "#fff" : "#9ca3af",
+                border: "none", transition: "all 0.15s",
+              }}>{idx + 1}</button>
+            );
+          })}
+        </div>
+
+        {/* Question card */}
         <Card>
-          <CardHeader title={`Erfasste Interviews (${interviews.length})`} icon={Icons.FileText} />
-          <CardBody style={{ maxHeight: 500, overflowY: "auto" }}>
-            {interviews.length === 0 && <div style={{ color: "#9ca3af", fontSize: 13 }}>Noch keine Interviews erfasst.</div>}
-            {interviews.map(i => (
-              <div key={i.id} style={{ padding: "12px 16px", background: "#f8fafc", borderRadius: 8, marginBottom: 8, border: "1px solid #f1f5f9" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <Badge label={i.role} color="#3b82f6" bg="#eff6ff" />
-                  <button onClick={() => remove(i.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 12 }}>Löschen</button>
-                </div>
-                <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{i.text.length > 200 ? i.text.slice(0, 200) + "…" : i.text}</div>
+          <CardHeader
+            title={`${q.id} – ${q.block}`}
+            subtitle={q.pflicht ? "Pflichtfrage" : "Optional"}
+            icon={Icons.FileText}
+            action={<div style={{ display: "flex", gap: 4 }}>
+              {q.qpr.map(qp => <Badge key={qp} label={qp} color="#6366f1" bg="#eef2ff" />)}
+              <Badge label={DIM_LABELS[q.dimension]} color={DIM_COLORS[q.dimension]} bg="#f8fafc" />
+            </div>}
+          />
+          <CardBody>
+            {/* Question text */}
+            <div style={{ fontSize: 16, fontWeight: 600, color: "#111827", marginBottom: 4, lineHeight: 1.5 }}>{q.text}</div>
+            {q.impulse && <div style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic", marginBottom: 16 }}>💡 {q.impulse}</div>}
+
+            {/* Freitext answer */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4 }}>Interviewantwort (Freitext)</label>
+              <textarea
+                value={freitext}
+                onChange={e => saveFreitext(q.id, e.target.value)}
+                rows={5}
+                placeholder="Antwort des Interviewpartners hier eintragen..."
+                style={{ width: "100%", padding: "12px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, resize: "vertical", fontFamily: "inherit", boxSizing: "border-box", lineHeight: 1.5 }}
+              />
+            </div>
+
+            {/* Likert rating (Forced Choice 1-4) */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>Bewertung – Forced-Choice-Skala 1–4</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[
+                  { v: 1, label: "1 – trifft nicht zu", col: "#ef4444" },
+                  { v: 2, label: "2 – trifft kaum zu", col: "#f59e0b" },
+                  { v: 3, label: "3 – überwiegend", col: "#3b82f6" },
+                  { v: 4, label: "4 – trifft voll zu", col: "#10b981" },
+                ].map(opt => (
+                  <button key={opt.v} onClick={() => saveLikert(q.id, opt.v)} style={{
+                    flex: 1, padding: "10px 4px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    background: likert === opt.v ? opt.col : "#f8fafc",
+                    color: likert === opt.v ? "#fff" : "#6b7280",
+                    border: likert === opt.v ? "none" : "1px solid #e5e7eb",
+                    transition: "all 0.15s",
+                  }}>{opt.label}</button>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Navigation */}
+            <div style={{ display: "flex", gap: 8, justifyContent: "space-between", borderTop: "1px solid #f1f5f9", paddingTop: 16 }}>
+              <Btn variant="secondary" onClick={() => setCurrentQIdx(Math.max(0, currentQIdx - 1))} disabled={currentQIdx === 0}>← Zurück</Btn>
+              <Btn variant="secondary" onClick={() => { setMode("list"); setActiveInterviewId(null); }}>Später fortsetzen</Btn>
+              {currentQIdx < activeQuestions.length - 1
+                ? <Btn onClick={() => setCurrentQIdx(currentQIdx + 1)}>Weiter →</Btn>
+                : <Btn variant="success" onClick={completeInterview}>✓ Abschließen</Btn>
+              }
+            </div>
           </CardBody>
         </Card>
-      </div>
-    </>
-  );
+      </>
+    );
+  }
+
+  return null;
 }
+
 
 // ============================================================================
 // LEITFADEN ENGINE
@@ -908,7 +1117,7 @@ function LeitfadenEngine({ answers, setAnswers }) {
 
   return (
     <>
-      <PageTitle title="Strukturierter Leitfaden" subtitle="40 Fragen · 8 Blöcke · Rollenbasiert · Forced-Choice-Skala 1–4" />
+      <PageTitle title="Leitfragen-Übersicht" subtitle={`${LEITFADEN.length} Fragen · Likert-Bewertungen aus Interviews · Korrektur möglich`} />
 
       <Card style={{ marginBottom: 20 }}>
         <CardBody style={{ display: "flex", alignItems: "center", gap: 20 }}>
@@ -995,21 +1204,28 @@ function CodingModule({ interviews, codings, setCodings }) {
   const [selInterview, setSelInterview] = useState("");
   const [selRolle, setSelRolle] = useState("PDL");
   const [autoSuggestions, setAutoSuggestions] = useState([]);
+  const [showTexts, setShowTexts] = useState(false);
 
   const selInt = interviews.find(i => i.id === selInterview);
 
-  // Auto-parse when interview is selected
+  // Auto-parse ALL Freitext answers from selected interview
   useEffect(() => {
-    if (selInt) {
-      const suggestions = parseTextForCodes(selInt.text);
+    if (selInt && selInt.antworten) {
+      const allText = Object.values(selInt.antworten).filter(t => t && t.trim()).join(" ");
+      const suggestions = parseTextForCodes(allText);
       setAutoSuggestions(suggestions);
+      setSelRolle(selInt.role || "PDL");
     } else {
       setAutoSuggestions([]);
     }
-  }, [selInterview]);
+  }, [selInterview, interviews]);
 
-  const addCoding = (codeId) => {
-    setCodings([...codings, { id: crypto.randomUUID(), interviewId: selInterview, codeId, rolle: selRolle, date: new Date().toISOString() }]);
+  const addCoding = (codeId, frageId) => {
+    setCodings([...codings, {
+      id: crypto.randomUUID(), interviewId: selInterview,
+      codeId, rolle: selRolle, frageId: frageId || null,
+      date: new Date().toISOString(),
+    }]);
   };
 
   const removeCoding = (id) => setCodings(codings.filter(c => c.id !== id));
@@ -1019,18 +1235,52 @@ function CodingModule({ interviews, codings, setCodings }) {
 
   const kategorien = [...new Set(CODEBUCH.map(c => c.ober))];
 
+  // Get answered questions for selected interview
+  const interviewQuestions = useMemo(() => {
+    if (!selInt) return [];
+    const qs = getQuestionsForRole(selInt.role);
+    return qs.filter(q => selInt.antworten?.[q.id]?.trim());
+  }, [selInt, interviews]);
+
   return (
     <>
-      <PageTitle title="Codierung" subtitle="Deduktive Codierung der Interviewdaten nach Codebuch (44 Codes)" />
+      <PageTitle title="Codierung" subtitle={`Deduktive Codierung · ${CODEBUCH.length} Codes · Auto-Parsing`} />
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
         <div>
+          {/* Interview-Auswahl */}
           <Card style={{ marginBottom: 16 }}>
-            <CardBody style={{ display: "flex", gap: 12 }}>
-              <Select label="Interview" value={selInterview} onChange={e => setSelInterview(e.target.value)}
-                options={[{ value: "", label: "— Bitte wählen —" }, ...interviews.map(i => ({ value: i.id, label: `${i.role}: ${i.text.slice(0, 50)}…` }))]} />
-              <Select label="Codier-Rolle" value={selRolle} onChange={e => setSelRolle(e.target.value)} options={ROLLEN} />
+            <CardBody>
+              <Select label="Interview wählen" value={selInterview} onChange={e => setSelInterview(e.target.value)}
+                options={[
+                  { value: "", label: "— Bitte wählen —" },
+                  ...interviews.map(i => ({
+                    value: i.id,
+                    label: `${i.role}: ${i.name || "Interview"} ${i.completed ? "✓" : "(offen)"}`,
+                  }))
+                ]} />
             </CardBody>
           </Card>
+
+          {/* Interview-Antworten Preview */}
+          {selInt && interviewQuestions.length > 0 && (
+            <Card style={{ marginBottom: 16 }}>
+              <CardHeader
+                title={`Antworten aus „${selInt.name}" (${interviewQuestions.length} beantwortet)`}
+                icon={Icons.FileText}
+                action={<button onClick={() => setShowTexts(!showTexts)} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>{showTexts ? "Einklappen" : "Anzeigen"}</button>}
+              />
+              {showTexts && (
+                <CardBody style={{ maxHeight: 400, overflowY: "auto" }}>
+                  {interviewQuestions.map(q => (
+                    <div key={q.id} style={{ marginBottom: 12, padding: 10, background: "#f8fafc", borderRadius: 6, borderLeft: "3px solid #3b82f6" }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#6366f1", marginBottom: 2 }}>{q.id} – {q.text}</div>
+                      <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{selInt.antworten[q.id]}</div>
+                    </div>
+                  ))}
+                </CardBody>
+              )}
+            </Card>
+          )}
 
           {/* Auto-Parse Suggestions */}
           {autoSuggestions.length > 0 && (
@@ -1038,7 +1288,7 @@ function CodingModule({ interviews, codings, setCodings }) {
               <CardHeader title="⚡ Auto-Vorschläge" subtitle={`${autoSuggestions.length} Codes per Keyword-Matching erkannt`} icon={Icons.Zap} />
               <CardBody>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {autoSuggestions.slice(0, 12).map(sugg => (
+                  {autoSuggestions.slice(0, 15).map(sugg => (
                     <button key={sugg.id} onClick={() => addCoding(sugg.id)}
                       style={{
                         padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
@@ -1057,6 +1307,7 @@ function CodingModule({ interviews, codings, setCodings }) {
             </Card>
           )}
 
+          {/* Code-Katalog */}
           {kategorien.map(kat => (
             <Card key={kat} style={{ marginBottom: 12 }}>
               <CardHeader title={kat} subtitle={`${CODEBUCH.filter(c => c.ober === kat).length} Codes`} />
@@ -1079,18 +1330,21 @@ function CodingModule({ interviews, codings, setCodings }) {
           ))}
         </div>
 
+        {/* Rechte Spalte: Codierungsliste */}
         <Card>
           <CardHeader title={`Codierungen (${codings.length})`} icon={Icons.Code} />
           <CardBody style={{ maxHeight: 600, overflowY: "auto" }}>
-            {codings.length === 0 && <div style={{ color: "#9ca3af", fontSize: 13 }}>Noch keine Codierungen.</div>}
+            {codings.length === 0 && <div style={{ color: "#9ca3af", fontSize: 13 }}>Noch keine Codierungen. Wählen Sie ein Interview und klicken Sie auf einen Code.</div>}
             {[...codings].reverse().map(c => {
               const code = CODEBUCH.find(cb => cb.id === c.codeId);
+              const intName = interviews.find(i => i.id === c.interviewId)?.name || c.interviewId?.slice(0, 8);
               return (
                 <div key={c.id} style={{ padding: "10px 12px", background: "#f8fafc", borderRadius: 8, marginBottom: 6, fontSize: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <Badge label={c.rolle} color="#3b82f6" bg="#eff6ff" />
                     <span style={{ marginLeft: 8, fontWeight: 600, color: "#6366f1" }}>{c.codeId}</span>
                     <span style={{ marginLeft: 6, color: "#6b7280" }}>{code?.label}</span>
+                    <span style={{ marginLeft: 6, fontSize: 10, color: "#9ca3af" }}>({intName})</span>
                   </div>
                   <button onClick={() => removeCoding(c.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 11 }}>✕</button>
                 </div>
@@ -1726,7 +1980,7 @@ Ende des wissenschaftlichen Berichts`;
           <CardHeader title="Wissenschaftlicher Bericht" subtitle="Generiert für Bachelorarbeit / Methodik-Kapitel" icon={Icons.FileText} />
           <CardBody>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, lineHeight: 1.7, color: "#374151", whiteSpace: "pre-wrap", background: "#f8fafc", padding: 20, borderRadius: 10, maxHeight: 500, overflowY: "auto" }}>
-{`STICHPROBE: ${interviews.length} Interviews, ${codings.length} Codierungen, ${answeredCount}/40 Leitfragen
+{`STICHPROBE: ${interviews.length} Interviews, ${codings.length} Codierungen, ${answeredCount}/${LEITFADEN.length} Leitfragen
 ORGANISATIONS-SCORE: ${orgScore}% [95%-KI: ${ci.lower}%–${ci.upper}%], SE=±${ci.se}%
 DIMENSIONEN: Prozess ${dimScores.prozess}% | Ressource ${dimScores.ressource}% | Qualität ${dimScores["qualität"]}% | Digital ${dimScores.digital}%
 SENSITIVITÄT: Range ${sensitivity.range.min}%–${sensitivity.range.max}% (±${Math.round(sensitivity.range.span/2)}%) → ${sensitivity.robustness}
