@@ -602,10 +602,12 @@ function parseTextForCodes(text, questionId) {
         });
         // Zusätzlich: Hint-Zeile mit direktem Code-Button
         if (m.codes.length > 0) {
+          // FIX: Auch beiHints keinen positiven Likert-Vorschlag für Problem-Codes
+          const safeHintLikert = (code.krit >= 2 && m.signal === 'positiv') ? null : m.likert;
           suggestions.push({
             id: "_h_" + questionId + "_" + m.signal + "_" + matchedPhrases[0],
             label: m.hint, ober: "Hinweis", matchScore: 25, signal: m.signal,
-            hint: m.hint, suggestedLikert: m.likert, confidence: "Info",
+            hint: m.hint, suggestedLikert: safeHintLikert, confidence: "Info",
             source: "hint", isHint: true, linkedCodes: m.codes,
           });
         }
