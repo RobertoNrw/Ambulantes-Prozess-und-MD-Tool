@@ -7,7 +7,7 @@
     window.VERA_API_URL   = "./api.php";
     window.VERA_API_TOKEN = "Bonavita2026Secure!";
   </script>
-<title>Bonavita · Process-Analyzer 9.0</title>
+<title>Bonavita · Process-Analyzer 9.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -157,7 +157,7 @@ function useBreakpoint() {
 }
 
 
-// Process.Process.Bonavita · 9.0
+// Process.Process.Bonavita · 9.1
 // QPR ambulant 2026 · MuG ambulant 2026 · 6 Rollen · 46 Fragen · 40 Codes
 
 // ============================================================================
@@ -590,11 +590,15 @@ function parseTextForCodes(text, questionId) {
           if (seenCodes.has(codeId)) return;
           seenCodes.add(codeId);
           const code = CODEBUCH.find(c => c.id === codeId);
-          if (code) suggestions.push({
-            ...code, matchScore: 30 + matchedPhrases.length * 10,
-            matchedPhrases, signal: m.signal, hint: m.hint,
-            suggestedLikert: m.likert, confidence: "Hoch", source: "frage",
-          });
+          if (code) {
+            // FIX: Bei Problem-Codes (krit >= 2) kein positiver Likert-Vorschlag
+            const safeLikert = (code.krit >= 2 && m.signal === 'positiv') ? null : m.likert;
+            suggestions.push({
+              ...code, matchScore: 30 + matchedPhrases.length * 10,
+              matchedPhrases, signal: m.signal, hint: m.hint,
+              suggestedLikert: safeLikert, confidence: "Hoch", source: "frage",
+            });
+          }
         });
         // Zusätzlich: Hint-Zeile mit direktem Code-Button
         if (m.codes.length > 0) {
@@ -882,7 +886,13 @@ function calculateReadiness(coverage, riskScore, stability, orga) {
 }
 
 function buildHeatmapData(codings) {
-  const kategorien = [...new Set(CODEBUCH.filter(c => c.krit > 0).map(c => c.ober))];
+  // Filter: Nur Defizit-Codes (krit > 0 und nicht Cluster "Positiv")
+  const defizitCodings = codings.filter(c => {
+    const code = CODEBUCH.find(cb => cb.id === c.codeId);
+    return code && code.krit > 0 && code.ober !== 'Positiv';
+  });
+  
+  const kategorien = [...new Set(CODEBUCH.filter(c => c.krit > 0 && c.ober !== 'Positiv').map(c => c.ober))];
   const katLabels = kategorien.map(k => CLUSTER_LABELS[k] || k);
   const rollenLabels = ROLLEN.map(r => ROLLEN_LABELS[r]?.split("(")[0]?.trim() || r);
   const matrix = [];
@@ -890,7 +900,7 @@ function buildHeatmapData(codings) {
   ROLLEN.forEach(rolle => {
     const row = [];
     kategorien.forEach(kat => {
-      const count = codings.filter(c => {
+      const count = defizitCodings.filter(c => {
         const code = CODEBUCH.find(cb => cb.id === c.codeId);
         return code && code.ober === kat && c.rolle === rolle;
       }).length;
@@ -1497,7 +1507,7 @@ function AuthScreen({ login }) {
             </svg>
           </div>
           <h1 style={{ fontSize:34,color:"#fff",fontFamily:"var(--font-display)",fontStyle:"italic",fontWeight:400,letterSpacing:"0.01em",marginBottom:6 }}>Bonavita</h1>
-          <div style={{ fontSize:12,color:"rgba(255,255,255,0.3)",letterSpacing:"0.12em",textTransform:"uppercase" }}>Process-Analyzer 9.0</div>
+          <div style={{ fontSize:12,color:"rgba(255,255,255,0.3)",letterSpacing:"0.12em",textTransform:"uppercase" }}>Process-Analyzer 9.1</div>
         </div>
 
         <div style={{ background:"#fff",borderRadius:20,padding:"32px 28px",boxShadow:"0 24px 48px rgba(0,0,0,0.3)" }}>
@@ -2409,10 +2419,16 @@ function AuditModule({ qprScores, evidenceCoverage, codings, dimScores, orgScore
 function HeatmapModule({ codings, qprScores }) {
   const heatmapData = buildHeatmapData(codings);
 
-  // Top 5 problems
+  // Top 5 problems – Nur Defizit-Codes (keine positiven Evidenzen, keine krit:0 Codes)
   const codeFreq = {};
   codings.forEach(c => { codeFreq[c.codeId] = (codeFreq[c.codeId] || 0) + 1; });
-  const top5 = Object.entries(codeFreq).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const top5 = Object.entries(codeFreq)
+    .filter(([codeId]) => {
+      const c = CODEBUCH.find(x => x.id === codeId);
+      return c && c.krit > 0 && c.ober !== 'Positiv';
+    })
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
   const maxCount = top5[0]?.[1] || 1;
 
   return (
@@ -3413,7 +3429,7 @@ function MacShell() {
             <span className="mac-dot yellow"></span>
             <span className="mac-dot green"></span>
           </div>
-          <div className="mac-title">Bonavita · Process-Analyzer 10.0</div>
+          <div className="mac-title">Bonavita · Process-Analyzer 9.1</div>
           <div className="mac-subtitle">QPR ambulant 2026 · MuG-Ready · Evidence Lab</div>
         </div>
         <div className="mac-content-wrap">
