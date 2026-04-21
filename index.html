@@ -761,9 +761,16 @@ async function speichern(data) {
     });
     if (!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json();
-    return j.status === "ok";
+    // Fallback: Bei API-Fehler in localStorage speichern
+    if (j.status !== "ok") throw new Error("API returned error");
+    return true;
   } catch(e) {
-    console.warn("Speichern fehlgeschlagen:", e.message);
+    console.warn("Speichern fehlgeschlagen:", e.message, "- Speichere lokal als Backup");
+    try {
+      localStorage.setItem("bonavita_backup_" + _currentUser, JSON.stringify({ data, timestamp: Date.now() }));
+    } catch(le) {
+      console.warn("LocalStorage-Backup ebenfalls fehlgeschlagen:", le.message);
+    }
     return false;
   }
 }
@@ -773,11 +780,26 @@ async function laden() {
     const r = await fetch(API_BASE + "?action=load&user=" + encodeURIComponent(_currentUser), {
       headers: { "Authorization": "Bearer " + API_TOKEN }
     });
-    if (r.status === 404) return null;
+    if (r.status === 404) {
+      // Fallback: Versuche localStorage-Backup zu laden
+      const backup = localStorage.getItem("bonavita_backup_" + _currentUser);
+      if (backup) {
+        console.log("Daten aus LocalStorage-Backup geladen");
+        const parsed = JSON.parse(backup);
+        return parsed.data || null;
+      }
+      return null;
+    }
     if (!r.ok) throw new Error("HTTP " + r.status);
     return await r.json();
   } catch(e) {
-    console.warn("Laden fehlgeschlagen:", e.message);
+    console.warn("Laden fehlgeschlagen:", e.message, "- Versuche LocalStorage-Backup");
+    const backup = localStorage.getItem("bonavita_backup_" + _currentUser);
+    if (backup) {
+      console.log("Daten aus LocalStorage-Backup geladen");
+      const parsed = JSON.parse(backup);
+      return parsed.data || null;
+    }
     return null;
   }
 }
@@ -1354,7 +1376,7 @@ function VeRABI() {
               <div style={{ minWidth:0 }}>
                 <div style={{ fontSize:15, fontWeight:700, color:"#f1f5f9", fontFamily:"var(--font-display)", fontStyle:"italic", lineHeight:1.1 }}>Bonavita</div>
                 <div style={{ fontSize:10, color:"#475569", letterSpacing:"0.12em", textTransform:"uppercase", marginTop:1 }}>
-                  9.0 · {TOTAL_FRAGEN} Fragen
+                  9.1 · {TOTAL_FRAGEN} Fragen
                 </div>
               </div>
             </div>
@@ -1483,7 +1505,7 @@ function VeRABI() {
 }
 
 // ============================================================================
-// AUTH SCREEN v9.0 – FIX: Bestehende Org ODER Neuer Account
+// AUTH SCREEN v9.1 – FIX: Bestehende Org ODER Neuer Account
 // ============================================================================
 
 function AuthScreen({ login }) {
@@ -1560,7 +1582,7 @@ function DashboardModule({ dimScores, orgScore, orgAmpel, qprScores, answers, in
 
   return (
     <>
-      <PageTitle title="Dashboard" subtitle="Gesamtübersicht aller Dimensionen und QPR-Aspekte" badge="9.0" />
+      <PageTitle title="Dashboard" subtitle="Gesamtübersicht aller Dimensionen und QPR-Aspekte" badge="9.1" />
 
       {/* KPI Cards */}
       <div className="grid-kpi">
@@ -2448,7 +2470,7 @@ function HeatmapModule({ codings, qprScores }) {
                   colorbar: { title: "Anzahl Codes", titleside: "right", tickfont: { size: 9 } },
                   hovertemplate: "Rolle: %{y}<br>Cluster: %{x}<br>Codes: %{z}<extra></extra>"
                 }]}
-                layout={{ height: 300, xaxis: { title: "Code-Cluster", tickfont: { size: 9 } }, yaxis: { title: "Rolle", tickfont: { size: 9 } }, margin: { l: 80, b: 80, t: 10, r: 10 } }}
+                layout={{ height: 340, xaxis: { title: "Code-Cluster", tickfont: { size: 9 }, tickangle: -45 }, yaxis: { title: "Rolle", tickfont: { size: 9 } }, margin: { l: 80, b: 100, t: 10, r: 10 } }}
               />
             ) : (
               <div style={{ color: "#9ca3af", textAlign: "center", padding: 24, fontSize: 11 }}>
@@ -2677,9 +2699,13 @@ function EmpfehlungsModule({ dimScores, interviews, codings, answers }) {
     if ((ds.prozess || 0) >= 2.5 && (ds.prozess || 0) < 3.5) result.push({ prio: 2, bereich: "Prozessoptimierung", icon: "🟡", text: "Bezugspflege stärken, Übergabeprozesse standardisieren, Pausenzeiten systematisch sicherstellen.", qpr: "QB1" });
     if ((ds.ressource || 0) >= 2.5 && (ds.ressource || 0) < 3.5) result.push({ prio: 2, bereich: "Personalentwicklung", icon: "🟡", text: "Fortbildungsplanung verstetigen, Einarbeitungskonzept etablieren, Mitarbeitergespräche institutionalisieren.", qpr: "QB5" });
 
-    // Code-based recommendations
+    // Code-based recommendations – Nur Defizit-Codes (krit > 0 und nicht "Positiv")
+    const defizitCodings = codings.filter(c => {
+      const code = CODEBUCH.find(cb => cb.id === c.codeId);
+      return code && code.krit > 0 && code.ober !== 'Positiv';
+    });
     const codeFreq = {};
-    codings.forEach(c => { codeFreq[c.codeId] = (codeFreq[c.codeId] || 0) + 1; });
+    defizitCodings.forEach(c => { codeFreq[c.codeId] = (codeFreq[c.codeId] || 0) + 1; });
     const topCodes = Object.entries(codeFreq).sort((a, b) => b[1] - a[1]).slice(0, 5);
     topCodes.forEach(([codeId, count]) => {
       const code = CODEBUCH.find(c => c.id === codeId);
@@ -2739,12 +2765,12 @@ function WissenschaftModule({ answers, interviews, codings, dimScores, orgScore,
   values.forEach(v => { if (v === 1) abcdDist.D++; if (v === 2) abcdDist.C++; if (v === 3) abcdDist.B++; if (v === 4) abcdDist.A++; });
   const abcdTotal = values.length || 1;
 
-  // Code-Cluster-Analyse
+  // Code-Cluster-Analyse – Nur Defizit-Codes (krit > 0 und nicht Cluster "Positiv")
   const clusterAnalysis = useMemo(() => {
     const freq = {};
     codings.forEach(c => {
       const code = CODEBUCH.find(cb => cb.id === c.codeId);
-      if (code) {
+      if (code && code.krit > 0 && code.ober !== 'Positiv') {
         if (!freq[code.ober]) freq[code.ober] = { count: 0, codes: {}, krit3: 0 };
         freq[code.ober].count++;
         freq[code.ober].codes[c.codeId] = (freq[code.ober].codes[c.codeId] || 0) + 1;
@@ -2779,7 +2805,7 @@ function WissenschaftModule({ answers, interviews, codings, dimScores, orgScore,
 
     codings.forEach(c => {
       const code = CODEBUCH.find(cb => cb.id === c.codeId);
-      if (!code) return;
+      if (!code || code.krit <= 0 || code.ober === 'Positiv') return;
       const cluster = code.ober;
       const qprId = code.qpr;
       const role = c.rolle || "PDL";
@@ -3144,14 +3170,41 @@ function ExportModule({ data, onImport, onReset }) {
     if (!importText.trim()) { alert("Bitte JSON-Text einfügen."); return; }
     try {
       const imported = JSON.parse(importText);
-      const iCount = imported.interviews?.length || 0;
-      const cCount = imported.codings?.length || 0;
+      
+      // Validierung: Prüfe auf doppelte Interview-IDs
+      const interviews = Array.isArray(imported.interviews) ? imported.interviews : [];
+      const interviewIds = new Set();
+      const duplicates = [];
+      interviews.forEach(i => {
+        if (interviewIds.has(i.id)) {
+          duplicates.push(i.id);
+        } else {
+          interviewIds.add(i.id);
+        }
+      });
+      
+      if (duplicates.length > 0) {
+        alert(`Warnung: ${duplicates.length} doppelte Interview-IDs gefunden: ${duplicates.slice(0, 5).join(", ")}${duplicates.length > 5 ? "..." : ""}. Diese werden bereinigt.`);
+      }
+      
+      // Bereinige doppelte IDs (behalte nur das erste Vorkommen)
+      const uniqueInterviews = [];
+      const seenIds = new Set();
+      interviews.forEach(i => {
+        if (!seenIds.has(i.id)) {
+          uniqueInterviews.push(i);
+          seenIds.add(i.id);
+        }
+      });
+      
+      const iCount = uniqueInterviews.length;
+      const cCount = Array.isArray(imported.codings) ? imported.codings.length : 0;
       const aCount = imported.answers ? Object.keys(imported.answers).length : 0;
 
       if (!confirm(`Import: ${iCount} Interviews, ${cCount} Codierungen, ${aCount} Bewertungen.\nAktuelle Daten werden überschrieben. Fortfahren?`)) return;
 
       onImport({
-        interviews: Array.isArray(imported.interviews) ? imported.interviews : [],
+        interviews: uniqueInterviews,
         codings: Array.isArray(imported.codings) ? imported.codings : [],
         answers: imported.answers && typeof imported.answers === "object" ? imported.answers : {},
       });
