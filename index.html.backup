@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <script>
     window.VERA_API_URL   = "./api.php";
-    // window.VERA_API_TOKEN = "Bonavita2026Secure!"; // DEAKTIVIERT AUS SICHERHEITSGRÜNDEN
+    window.VERA_API_TOKEN = "Bonavita2026Secure!";
   </script>
 <title>Bonavita · Process-Analyzer 9.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -761,14 +761,31 @@ async function speichern(data) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
+// const API_BASE  = (window.VERA_API_URL  || "./api.php");
+// const API_TOKEN = (window.VERA_API_TOKEN || "Bonavita2026Secure!");
+// let _currentUser = "default";
+// 
+// function setStorageUser(name) {
+//   _currentUser = (name || "default").toLowerCase()
+//     .replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || "default";
+// }
+// 
+// async function speichern(data) {
+//   try {
+//     const r = await fetch(API_BASE + "?action=save&user=" + encodeURIComponent(_currentUser), {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_TOKEN },
+      body: JSON.stringify(data)
+    });
     if (!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json();
+    // Fallback: Bei API-Fehler in localStorage speichern
     if (j.status !== "ok") throw new Error("API returned error");
     return true;
   } catch(e) {
     console.warn("Speichern fehlgeschlagen:", e.message, "- Speichere lokal als Backup");
     try {
-      localStorage.setItem("bonavita_backup_" + _storageUserKey, JSON.stringify({ data, timestamp: Date.now() }));
+      localStorage.setItem("bonavita_backup_" + _currentUser, JSON.stringify({ data, timestamp: Date.now() }));
     } catch(le) {
       console.warn("LocalStorage-Backup ebenfalls fehlgeschlagen:", le.message);
     }
@@ -778,12 +795,12 @@ async function speichern(data) {
 
 async function laden() {
   try {
-    const r = await fetch(API_BASE + "?action=load&user=" + encodeURIComponent(_storageUserKey), {
-      headers: { "Content-Type": "application/json" }
+    const r = await fetch(API_BASE + "?action=load&user=" + encodeURIComponent(_currentUser), {
+      headers: { "Authorization": "Bearer " + API_TOKEN }
     });
     if (r.status === 404) {
       // Fallback: Versuche localStorage-Backup zu laden
-      const backup = localStorage.getItem("bonavita_backup_" + _storageUserKey);
+      const backup = localStorage.getItem("bonavita_backup_" + _currentUser);
       if (backup) {
         console.log("Daten aus LocalStorage-Backup geladen");
         const parsed = JSON.parse(backup);
@@ -796,7 +813,7 @@ async function laden() {
   } catch(e) {
     console.warn("Laden fehlgeschlagen:", e.message, "- Versuche LocalStorage-Backup");
     try {
-      const backup = localStorage.getItem("bonavita_backup_" + _storageUserKey);
+      const backup = localStorage.getItem("bonavita_backup_" + _currentUser);
       if (backup) {
         try {
           const parsed = JSON.parse(backup);
@@ -804,7 +821,7 @@ async function laden() {
           return parsed.data || null;
         } catch (parseError) {
           console.error("LocalStorage-Backup ist beschädigt:", parseError);
-          localStorage.removeItem("bonavita_backup_" + _storageUserKey);
+          localStorage.removeItem("bonavita_backup_" + _currentUser);
         }
       }
     } catch (backupError) {
@@ -816,8 +833,9 @@ async function laden() {
 
 
 /**
- * Gibt alle Fragen zurück, die dieser Rolle zugeordnet sind.
- * (Keine Begrenzung auf 20 Fragen mehr - zeigt alle relevanten Fragen)
+ * Selektiert exakt 20 Fragen für eine Rolle.
+ * Priorisierung: 1) Pflichtfragen, 2) höheres Gewicht, 3) Dimensionsbalance
+ * Bei < 20 verfügbaren Fragen: alle zurückgeben
  */
 function getQuestionsForRole(role) {
   return LEITFADEN.filter(q => q.rollen.includes(role));
@@ -1284,19 +1302,15 @@ function VeRABI() {
   useEffect(() => {
     if (!dataLoaded || !currentUser) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    
-    // Snapshot beim Anstoßen verwenden, um Race Conditions zu vermeiden
-    const snapshot = { interviews, codings, answers, organizations, users };
-    
     saveTimerRef.current = setTimeout(async () => {
       setSaveStatus("saving");
-      const ok = await speichern(snapshot);
+      const ok = await speichern(dataRef.current);
       setSaveStatus(ok ? "saved" : "error");
       if (ok) setLastSaved(new Date());
       setTimeout(() => setSaveStatus("idle"), 2000);
     }, 1000);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [interviews, codings, answers, organizations, users, dataLoaded, currentUser]);
+  }, [interviews, codings, answers, dataLoaded, currentUser]);
 
   // ── Sofort-Speichern (für Kinder-Komponenten) ──
   const saveNow = useCallback(async (overrides = {}) => {
@@ -1308,7 +1322,7 @@ function VeRABI() {
   const login = async (user, org) => {
     setLoadingUser(true);
     const fileKey = user.fileKey || user.name.toLowerCase().replace(/[^a-z0-9]/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"") || "default";
-    setStorageUserKey(fileKey);
+    setStorageUser(fileKey);
     setCurrentUser(user);
     setCurrentOrg(org);
 
