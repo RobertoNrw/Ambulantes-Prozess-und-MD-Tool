@@ -794,11 +794,20 @@ async function laden() {
     return await r.json();
   } catch(e) {
     console.warn("Laden fehlgeschlagen:", e.message, "- Versuche LocalStorage-Backup");
-    const backup = localStorage.getItem("bonavita_backup_" + _currentUser);
-    if (backup) {
-      console.log("Daten aus LocalStorage-Backup geladen");
-      const parsed = JSON.parse(backup);
-      return parsed.data || null;
+    try {
+      const backup = localStorage.getItem("bonavita_backup_" + _currentUser);
+      if (backup) {
+        try {
+          const parsed = JSON.parse(backup);
+          console.log("Daten aus LocalStorage-Backup geladen");
+          return parsed.data || null;
+        } catch (parseError) {
+          console.error("LocalStorage-Backup ist beschädigt:", parseError);
+          localStorage.removeItem("bonavita_backup_" + _currentUser);
+        }
+      }
+    } catch (backupError) {
+      console.error("Zugriff auf LocalStorage fehlgeschlagen:", backupError);
     }
     return null;
   }
