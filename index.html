@@ -55,7 +55,7 @@
 #spotlight-results{max-height:320px;overflow-y:auto;padding:4px 0}.sp-item{padding:10px 18px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .1s;font-size:13px}.sp-item:hover,.sp-item.active{background:var(--accent-soft)}
 .sp-icon{width:28px;height:28px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:var(--accent-soft);color:var(--accent);flex-shrink:0}
 .sp-title{font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sp-sub{font-size:11px;color:var(--text3)}.sp-hint{padding:8px 18px;font-size:11px;color:var(--text3);text-align:center}
-#minimap{position:fixed;bottom:40px;right:12px;z-index:9090;width:180px;height:120px;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--rs);overflow:hidden;box-shadow:var(--shadow);backdrop-filter:blur(20px);cursor:pointer}
+#minimap{position:fixed;bottom:52px;right:12px;z-index:9090;width:180px;height:120px;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--rs);overflow:hidden;box-shadow:var(--shadow);backdrop-filter:blur(20px);cursor:pointer}
 #minimap-canvas{width:100%;height:100%;display:block}
 #conn-label-editor{position:fixed;z-index:9700;display:none;background:var(--glass);border:1px solid var(--accent);border-radius:var(--rs);padding:8px;min-width:200px;box-shadow:var(--shadow);backdrop-filter:blur(40px)}
 #conn-label-input{width:100%;padding:6px 10px;border:1px solid var(--glass-border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;font-family:var(--font);outline:none}#conn-label-input:focus{border-color:var(--accent)}
@@ -84,6 +84,19 @@
 .tpl-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
 .tpl-card .tpl-icon{font-size:24px;margin-bottom:6px}.tpl-card .tpl-name{font-size:13px;font-weight:600;color:var(--text)}.tpl-card .tpl-desc{font-size:11px;color:var(--text3);margin-top:3px}
 #save-indicator{display:inline-flex;align-items:center;gap:6px;font-weight:500;opacity:.95}
+#help-modal{position:fixed;inset:0;z-index:99000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px)}
+#help-modal.open{display:flex}
+#help-box{width:min(520px,92vw);background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px);overflow:hidden;max-height:80vh}
+#help-header{padding:16px 20px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;font-size:16px;font-weight:600;color:var(--text)}
+#help-header button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:2px 8px;border-radius:4px}#help-header button:hover{color:var(--text)}
+#help-content{padding:0;overflow-y:auto;max-height:calc(80vh - 60px)}
+.help-section{padding:14px 20px;border-bottom:1px solid var(--glass-border)}
+.help-section:last-child{border-bottom:none}
+.help-section h3{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;font-weight:600}
+.help-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}
+.help-row kbd{background:var(--accent-soft);border:1px solid var(--glass-border);border-radius:4px;padding:2px 8px;font-size:11px;font-family:var(--font);font-weight:500;color:var(--text)}
+.help-desc{color:var(--text2)}
+#canvas-name-display{font-size:12px;color:var(--text2);padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
 </style>
 </head>
 <body>
@@ -96,7 +109,7 @@
 <button class="tb-btn" id="btn-snap" title="Snap">&#8862;</button><button class="tb-btn" id="btn-fit" title="Fit to Screen">&#8865;</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-search" title="Suche &#8984;K">&#8981;</button><button class="tb-btn" id="btn-tpl" title="Templates">&#8862; Tpl</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-png" title="PNG Export">&#8595; PNG</button><button class="tb-btn" id="btn-export" title="JSON Export">&#8595; JSON</button><button class="tb-btn" id="btn-import" title="Import">&#8593;</button><div class="tb-sep"></div>
-<button class="tb-btn" id="btn-theme" title="Theme">&#9681;</button><button class="tb-btn" id="btn-clear" title="Leeren">&#128465;</button>
+<button class="tb-btn" id="btn-theme" title="Theme">&#9681;</button><button class="tb-btn" id="btn-help" title="Hilfe (?)">&#10067;</button><button class="tb-btn" id="btn-clear" title="Leeren">&#128465;</button>
 </div>
 <div id="statusbar" style="display:none"><span><b id="node-count">0</b> Nodes</span><span><b id="conn-count">0</b> Conn</span><span id="hint"><b>Dblclick</b>=Node &middot; <b>Shift+Drag</b>=Connect &middot; <b>&#8984;K</b>=Suche &middot; <b>D</b>=Dup</span><span id="zoom-display" title="Reset">100%</span><span class="zoom-controls"><button id="zoom-out">&#8722;</button><button id="zoom-in">+</button></span></div>
 <div id="ctx-menu"></div><div id="toast"></div>
@@ -106,6 +119,7 @@
 <div id="tbl-editor"><div id="tbl-editor-header"><span>Tabelle bearbeiten</span><button id="tbl-close">&#10005;</button></div><div id="tbl-grid"></div><div id="tbl-footer"><div><button id="tbl-add-row">+ Zeile</button><button id="tbl-add-col">+ Spalte</button><button id="tbl-del-row">&#8722; Zeile</button><button id="tbl-del-col">&#8722; Spalte</button></div><button class="tbl-save" id="tbl-save">Speichern</button></div></div>
 <div id="tpl-picker"><div id="tpl-box"><div id="tpl-header"><span>Canvas-Template w&#228;hlen</span><button id="tpl-close">&#10005;</button></div><div id="tpl-grid"></div></div></div>
 <div id="minimap" style="display:none"><canvas id="minimap-canvas"></canvas></div>
+<div id="help-modal"><div id="help-box"><div id="help-header"><span>Tastaturkürzel &amp; Hilfe</span><button id="help-close">&#10005;</button></div><div id="help-content"><div class="help-section"><h3>Navigation</h3><div class="help-row"><kbd>Mausrad</kbd><span class="help-desc">Zoomen</span></div><div class="help-row"><kbd>Strg + Drag</kbd><span class="help-desc">Panorama</span></div><div class="help-row"><kbd>1</kbd><span class="help-desc">Fit to Screen</span></div></div><div class="help-section"><h3>Node Aktionen</h3><div class="help-row"><kbd>Doppelklick</kbd><span class="help-desc">Neuer Node</span></div><div class="help-row"><kbd>D</kbd><span class="help-desc">Duplizieren</span></div><div class="help-row"><kbd>L</kbd><span class="help-desc">Sperren/Entsperren</span></div><div class="help-row"><kbd>Entf</kbd><span class="help-desc">Löschen</span></div><div class="help-row"><kbd>Pfeiltasten</kbd><span class="help-desc">Bewegen (1px)</span></div><div class="help-row"><kbd>Shift + Pfeile</kbd><span class="help-desc">Bewegen (10px)</span></div></div><div class="help-section"><h3>Verbindungen</h3><div class="help-row"><kbd>Shift + Drag</kbd><span class="help-desc">Verbindung erstellen</span></div><div class="help-row"><kbd>Doppelklick Conn</kbd><span class="help-desc">Label bearbeiten</span></div></div><div class="help-section"><h3>Allgemein</h3><div class="help-row"><kbd>&#8984;K / Strg+K</kbd><span class="help-desc">Spotlight Suche</span></div><div class="help-row"><kbd>?</kbd><span class="help-desc">Diese Hilfe</span></div><div class="help-row"><kbd>G</kbd><span class="help-desc">Grid ein/aus</span></div><div class="help-row"><kbd>Esc</kbd><span class="help-desc">Abbrechen/Schließen</span></div></div></div></div></div>
 
 <script>
 'use strict';
@@ -139,6 +153,14 @@ const s2c=(sx,sy)=>({x:(sx-vx)/vs,y:(sy-vy)/vs});
 const snV=v=>snap?Math.round(v/SNAP)*SNAP:v;
 function sR(){if(!rafP){rafP=true;requestAnimationFrame(()=>{rafP=false;render();scheduleMM();});}}
 function toast(m,ms=1800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);}
+// Custom Confirm Dialog
+let _confirmResolve=null;
+function showConfirmDialog(title,msg){return new Promise(resolve=>{_confirmResolve=resolve;const d=document.createElement('div');d.id='custom-confirm';d.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px)';d.innerHTML='<div style=\"background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:24px;max-width:360px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px)\"><h3 style=\"font-size:16px;margin-bottom:8px;color:var(--text)\"">'+title+'</h3><p style=\"font-size:13px;color:var(--text2);margin-bottom:20px\">'+msg+'</p><div style=\"display:flex;gap:8px;justify-content:flex-end\"><button id=\"cf-cancel\" style=\"padding:8px 16px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text2);font-size:13px;font-family:var(--font);cursor:pointer\">Abbrechen</button><button id=\"cf-ok\" style=\"padding:8px 16px;border-radius:8px;border:none;background:var(--red);color:#fff;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer\">Löschen</button></div></div>';document.body.appendChild(d);document.getElementById('cf-cancel').onclick=()=>{document.body.removeChild(d);_confirmResolve=false);_confirmResolve=null;};document.getElementById('cf-ok').onclick=()=>{document.body.removeChild(d);_confirmResolve(true);_confirmResolve=null;};});}
+// Help Modal Functions
+function openHelp(){document.getElementById('help-modal').classList.add('open');}
+function closeHelp(){document.getElementById('help-modal').classList.remove('open');}
+document.getElementById('help-close').onclick=closeHelp;
+document.getElementById('help-modal').addEventListener('mousedown',e=>{if(e.target===document.getElementById('help-modal'))closeHelp();});
 function fmtSaveTime(ts){const d=new Date(ts),hh=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');return hh+':'+mm;}
 function setSaveIndicator(msg,color='var(--text2)'){const el=document.getElementById('save-indicator');if(el){el.textContent=msg;el.style.color=color;}}
 function markSaved(ts=Date.now(),label='Lokal gespeichert'){try{localStorage.setItem('ic_v3_saved_at',String(ts));}catch(e){}setSaveIndicator(label+' · '+fmtSaveTime(ts),'#30D158');}
@@ -147,7 +169,7 @@ const API_URL='api.php';
 function getCanvasId(){let id=localStorage.getItem('ic_canvas_id');if(!id){id='default';localStorage.setItem('ic_canvas_id',id);}return id;}
 async function apiGet(action,id){const u=id?`${API_URL}?action=${action}&id=${encodeURIComponent(id)}`:`${API_URL}?action=${action}`;const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function apiPost(action,id,payload){const u=id?`${API_URL}?action=${action}&id=${encodeURIComponent(id)}`:`${API_URL}?action=${action}`;const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload||{})});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
-async function loadFromBackend(){try{const res=await apiGet('load',getCanvasId());if(res&&res.ok&&res.exists&&res.data){impD(res.data);if(res.updatedAt){const ts=Date.parse(res.updatedAt)||Date.now();try{localStorage.setItem('ic_v3_saved_at',String(ts));}catch(e){}setSaveIndicator('Server geladen · '+fmtSaveTime(ts),'#30D158');}return true;}}catch(e){}return false;}
+async function loadFromBackend(){try{const res=await apiGet('load',getCanvasId());if(res&&res.ok&&res.exists&&res.data){const localTs=Number(localStorage.getItem('ic_v3_saved_at')||0);const serverTs=Date.parse(res.updatedAt)||0;if(serverTs>localTs){if(localTs>0&&!confirm('Server-Version ist neuer ('+fmtSaveTime(serverTs)+'). Lokale Änderungen werden überschrieben. Fortfahren?')){return false;}impD(res.data);const ts=serverTs||Date.now();try{localStorage.setItem('ic_v3_saved_at',String(ts));}catch(e){}setSaveIndicator('Server geladen · '+fmtSaveTime(ts),'#30D158');toast('Von Server geladen');}else{toast('Lokal aktuell');}return true;}}catch(e){console.error('Load failed:',e);}return false;}
 async function saveToBackend(){try{const res=await apiPost('save',getCanvasId(),{data:expD()});if(res&&res.ok){const ts=Date.parse(res.updatedAt)||Date.now();try{localStorage.setItem('ic_v3_saved_at',String(ts));}catch(e){}setSaveIndicator('Server gespeichert · '+fmtSaveTime(ts),'#30D158');return true;}}catch(e){setSaveIndicator('Nur lokal gespeichert','#FF9F0A');}return false;}
 // ── setSaveIndicator ist nur einmal definiert (Bug 2 Fix: Duplikat entfernt) ──
 function uSB(){document.getElementById('node-count').textContent=nodes.length;document.getElementById('conn-count').textContent=conns.length;document.getElementById('zoom-display').textContent=Math.round(vs*100)+'%';}
@@ -182,7 +204,7 @@ function addS(n){if(!n.isSelected){n.isSelected=true;selN.push(n);}}
 function togS(n){n.isSelected?(n.isSelected=false,selN=selN.filter(s=>s!==n)):addS(n);}
 
 // ═══ DUPLICATE ═══
-function dupN(arr){if(!arr.length)return;clrS();arr.forEach(nd=>{const nn=addN(nd.type||'text',nd.x+30,nd.y+30,nd.text);nn.width=nd.width;nn.height=nd.height;nn.bg=nd.bg;nn.textColor=nd.textColor;nn.border=nd.border;if(nd.typeData)nn.typeData=JSON.parse(JSON.stringify(nd.typeData));addS(nn);});toast(arr.length+' dupliziert');}
+function dupN(arr){if(!arr.length)return;const oldToNew=new Map();clrS();arr.forEach(nd=>{const nn=addN(nd.type||'text',nd.x+30,nd.y+30,nd.text);nn.width=nd.width;nn.height=nd.height;nn.bg=nd.bg;nn.textColor=nd.textColor;nn.border=nd.border;if(nd.typeData)nn.typeData=JSON.parse(JSON.stringify(nd.typeData));oldToNew.set(nd.id,nn.id);addS(nn);});conns.forEach(c=>{const newFrom=oldToNew.get(c.from),newTo=oldToNew.get(c.to);if(newFrom&&newTo){conns.push({id:'cd'+Date.now()+Math.random().toString(36).slice(2,7),from:newFrom,to:newTo,fromSide:c.fromSide,toSide:c.toSide,label:c.label||'',style:c.style||'solid',color:c.color||''});}});toast(arr.length+' dupliziert');}
 
 // ═══ GEOMETRY ═══
 function nAt(cx,cy){let g=null;for(let i=nodes.length-1;i>=0;i--){const n=nodes[i];if(n.type==='link'){const dx=cx-(n.x+n.width/2),dy=cy-(n.y+n.height/2),r=Math.min(n.width,n.height)/2;if(dx*dx+dy*dy<=r*r)return n;continue;}if(cx>=n.x&&cx<=n.x+n.width&&cy>=n.y&&cy<=n.y+n.height){if(n.type==='group'){if(!g)g=n;}else return n;}}return g;}
@@ -532,7 +554,9 @@ canvas.addEventListener('lostpointercapture',()=>{activePointerId=null;});
 // ═══ KEYBOARD ═══
 document.addEventListener('keydown',e=>{const tag=document.activeElement?.tagName;if(tag==='TEXTAREA'||tag==='INPUT')return;
 if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();openSP();return;}
-if(e.key==='Escape'){if(document.getElementById('spotlight').classList.contains('open')){closeSP();e.preventDefault();return;}if(document.getElementById('tpl-picker').classList.contains('open')){closeTPL();e.preventDefault();return;}if(isConn){isConn=false;cStart=null;cStartPt=null;setCursor('default');sR();}closeCM();closeDD();closeCLE();closeTblEd();e.preventDefault();return;}
+if(e.key==='?'){e.preventDefault();openHelp();return;}
+if(e.key==='g'||e.key==='G'){if(!e.ctrlKey&&!e.metaKey){showGrid=!showGrid;toast(showGrid?'Grid an':'Grid aus');sR();e.preventDefault();return;}}
+if(e.key==='Escape'){if(document.getElementById('spotlight').classList.contains('open')){closeSP();e.preventDefault();return;}if(document.getElementById('tpl-picker').classList.contains('open')){closeTPL();e.preventDefault();return;}if(document.getElementById('help-modal').classList.contains('open')){closeHelp();e.preventDefault();return;}if(isConn){isConn=false;cStart=null;cStartPt=null;setCursor('default');sR();}closeCM();closeDD();closeCLE();closeTblEd();e.preventDefault();return;}
 const step=e.shiftKey?10:1;
 switch(e.key){
 case'Delete':case'Backspace':if(selC){delC(selC);e.preventDefault();return;}if(selN.length){[...selN].forEach(n=>delN(n));e.preventDefault();}break;
@@ -545,10 +569,10 @@ case'd':case'D':if(selN.length){e.preventDefault();dupN(selN.map(n=>({...cN(n)})
 case'l':case'L':if(!e.ctrlKey&&!e.metaKey&&selN.length){selN.forEach(n=>n.locked=!n.locked);toast(selN[0].locked?'🔒':'🔓');pH();aS();sR();e.preventDefault();}break;
 case'n':case'N':if(!e.ctrlKey&&!e.metaKey){const cx=(canvas.width/2-vx)/vs,cy=(canvas.height/2-vy)/vs;addN('text',cx-125,cy-60);e.preventDefault();}break;
 case'1':if(!e.ctrlKey&&!e.metaKey){fitAll();e.preventDefault();}break;
-case'ArrowLeft':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x-=step;});pH();sR();e.preventDefault();}break;
-case'ArrowRight':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x+=step;});pH();sR();e.preventDefault();}break;
-case'ArrowUp':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y-=step;});pH();sR();e.preventDefault();}break;
-case'ArrowDown':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y+=step;});pH();sR();e.preventDefault();}break;
+case'ArrowLeft':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x-=step;});aS();pH();sR();e.preventDefault();}break;
+case'ArrowRight':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x+=step;});aS();pH();sR();e.preventDefault();}break;
+case'ArrowUp':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y-=step;});aS();pH();sR();e.preventDefault();}break;
+case'ArrowDown':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y+=step;});aS();pH();sR();e.preventDefault();}break;
 }});
 
 // ═══ INLINE EDIT ═══
@@ -719,8 +743,11 @@ document.getElementById('btn-snap').onclick=()=>{snap=!snap;document.getElementB
 document.getElementById('btn-fit').onclick=fitAll;document.getElementById('btn-search').onclick=openSP;document.getElementById('btn-tpl').onclick=openTPL;document.getElementById('btn-png').onclick=expPNG;
 document.getElementById('btn-export').onclick=()=>{const b=new Blob([JSON.stringify(expD(),null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='canvas-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u);toast('JSON ↓');};
 document.getElementById('btn-import').onclick=()=>{const inp=document.createElement('input');inp.type='file';inp.accept='.json,.canvas';inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{impD(JSON.parse(ev.target.result));aS();toast('↑ OK');}catch(er){toast('❌');}};r.readAsText(f);};inp.click();};
-document.getElementById('btn-clear').onclick=()=>{if(confirm('Canvas leeren?')){nodes=[];conns=[];clrS();nc=0;pH();aS();uSB();sR();toast('🗑');}};
-document.getElementById('btn-theme').onclick=()=>{document.documentElement.classList.toggle('light');toast(D()?'Dark':'Light');sR();};
+document.getElementById('btn-clear').onclick=()=>{if(showConfirmDialog('Canvas leeren?','Alle Nodes und Verbindungen werden gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.')){nodes=[];conns=[];clrS();nc=0;pH();aS();uSB();sR();toast('🗑');}};
+document.getElementById('btn-theme').onclick=()=>{document.documentElement.classList.toggle('light');const isLight=document.documentElement.classList.contains('light');localStorage.setItem('ic_theme',isLight?'light':'dark');toast(isLight?'Light':'Dark');sR();};
+document.getElementById('btn-help').onclick=openHelp;
+// Theme persistent laden
+try{const t=localStorage.getItem('ic_theme');if(t==='light')document.documentElement.classList.add('light');}catch(e){}
 document.getElementById('zoom-display').onclick=()=>{vx=0;vy=0;vs=1;sR();};
 document.getElementById('zoom-in').onclick=()=>{const ns=Math.min(6,vs*1.2),cx=canvas.width/2,cy=canvas.height/2;vx-=(cx-vx)*(ns-vs)/vs;vy-=(cy-vy)*(ns-vs)/vs;vs=ns;sR();};
 document.getElementById('zoom-out').onclick=()=>{const ns=Math.max(0.08,vs/1.2),cx=canvas.width/2,cy=canvas.height/2;vx-=(cx-vx)*(ns-vs)/vs;vy-=(cy-vy)*(ns-vs)/vs;vs=ns;sR();};
