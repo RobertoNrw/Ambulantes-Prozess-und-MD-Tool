@@ -154,6 +154,7 @@ const STICKY_C=[{bg:'#FFD60A',border:'#CCB000',textColor:'#1a1200',label:'Gelb'}
 const NT=[{type:'text',icon:'T',label:'Text'},{type:'sticky',icon:'S',label:'Sticky'},{type:'checklist',icon:'✓',label:'Liste'},{type:'group',icon:'□',label:'Gruppe'},{type:'table',icon:'⊞',label:'Tabelle'},{type:'link',icon:'🔗',label:'Link'},{type:'diamond',icon:'◇',label:'Raute'},{type:'ellipse',icon:'⬭',label:'Ellipse'},{type:'hexagon',icon:'⬡',label:'Hexagon'}];
 let nodes=[],conns=[],nc=0,selN=[],selC=null,vx=0,vy=0,vs=1;
 let isDrag=false,isPan=false,isND=false,isConn=false,isSel=false,isRz=false,isSB=false;
+let panStartX=0,panStartY=0;
 let dNode=null,dOX=0,dOY=0,lMX=0,lMY=0,moved=false,onCv=true;
 let cStart=null,cStartPt=null,sStart={x:0,y:0},sRect=null,hNode=null,hCP=null;
 let rzN=null,rzH=null,rzSX=0,rzSY=0,rzSW=0,rzSH=0,rzNX=0,rzNY=0;
@@ -489,10 +490,12 @@ canvas.addEventListener('contextmenu',e=>{e.preventDefault();const r=canvas.getB
 canvas.addEventListener('mousedown',e=>{if(window.PointerEvent)return;closeDD();closeCM();closeCLE();closeTblEd();
 const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;const{x:cx,y:cy}=s2c(mx,my);onCv=true;const node=nAt(cx,cy);
 
-// Strg + Linke Maustaste für Panning
-if(e.ctrlKey && e.button === 0 && !node){
+// Strg + Linke Maustaste für Panning (auch über Nodes)
+if((e.ctrlKey||e.metaKey)&&e.button===0){
     isPanMode = true;
     isPan = true;
+    panStartX = vx;
+    panStartY = vy;
     lMX = mx;
     lMY = my;
     return;
@@ -506,10 +509,12 @@ if(!node.locked){const rh=node._rh?.find(h=>cx>=h.x&&cx<=h.x+h.w&&cy>=h.y&&cy<=h
 if(node._sb){const sb=node._sb;if(cx>=sb.x&&cx<=sb.x+sb.w&&cy>=sb.y&&cy<=sb.y+sb.h){isSB=true;sbN=node;sbOff=cy-sb.tY;isDrag=false;lMX=mx;lMY=my;return;}}
 if(e.ctrlKey||e.metaKey)togS(node);else if(e.shiftKey&&selN.length>0)addS(node);else selOne(node);
 if(node.isSelected&&!node.locked){isND=true;dNode=node;dOX=cx-node.x;dOY=cy-node.y;}
-}else{if(e.button===1||e.altKey){isPan=true;if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&!e.altKey)clrS();}else{if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey)clrS();isSel=true;sStart={x:cx,y:cy};sRect=null;}}
+}else{if(e.button===1||e.altKey){isPan=true;panStartX=vx;panStartY=vy;lMX=mx;lMY=my;isDrag=false;}else{if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey)clrS();isSel=true;sStart={x:cx,y:cy};sRect=null;}}
 lMX=mx;lMY=my;isDrag=true;moved=false;sR();});
 
 canvas.addEventListener('mousemove',e=>{if(window.PointerEvent)return;const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;const{x:cx,y:cy}=s2c(mx,my);
+// Panning für Strg+Linke Maustaste (non-Pointer)
+if(isPanMode){vx=panStartX+(mx-lMX);vy=panStartY+(my-lMY);setCursor('grabbing');sR();return;}
 hNode=nAt(cx,cy);hCP=hNode?cpAt(hNode,cx,cy):null;
 if(isRz)setCursor(rzH.cursor);else if(isSB)setCursor('ns-resize');else if(isConn)setCursor('crosshair');else if(hCP&&e.shiftKey)setCursor('copy');else if(hNode){const rh=hNode._rh?.find(h=>cx>=h.x&&cx<=h.x+h.w&&cy>=h.y&&cy<=h.y+h.h);setCursor(rh?rh.cursor:(hNode.locked?'not-allowed':'grab'));}else setCursor('default');
 const dx=mx-lMX,dy=my-lMY;if(Math.abs(dx)>1||Math.abs(dy)>1)moved=true;applyDrag(cx,cy,dx,dy);lMX=mx;lMY=my;sR();});
@@ -554,6 +559,8 @@ if(n){if(n.type==='checklist')openCLEd(n);else if(n.type==='table')openTblEd(n);
 // Pointer Events
 canvas.addEventListener('pointerdown',e=>{if(!window.PointerEvent||!canHandlePointer(e))return;activePointerId=e.pointerId;try{canvas.setPointerCapture(e.pointerId);}catch(_){ }closeDD();closeCM();closeCLE();closeTblEd();
 const{mx,my}=getLocalPoint(e);const{x:cx,y:cy}=s2c(mx,my);onCv=true;const node=nAt(cx,cy);
+// Panning mit Strg+Linksklick oder Mittelklick
+if(e.ctrlKey||e.metaKey||e.button===1){isPan=true;panStartX=vx;panStartY=vy;lMX=mx;lMY=my;isDrag=false;sR();return;}
 if(!node){const c=cAt(cx,cy);if(c){clrS();selC=c;sR();return;}}
 if(node){
 if(node.type==='checklist'&&!e.shiftKey){const idx=chkAt(node,cx,cy);if(idx>=0){node.typeData.items[idx].checked=!node.typeData.items[idx].checked;pH();aS();sR();return;}}
@@ -562,10 +569,12 @@ if(!node.locked){const rh=node._rh?.find(h=>cx>=h.x&&cx<=h.x+h.w&&cy>=h.y&&cy<=h
 if(node._sb){const sb=node._sb;if(cx>=sb.x&&cx<=sb.x+sb.w&&cy>=sb.y&&cy<=sb.y+sb.h){isSB=true;sbN=node;sbOff=cy-sb.tY;isDrag=false;lMX=mx;lMY=my;return;}}
 if(e.ctrlKey||e.metaKey)togS(node);else if(e.shiftKey&&selN.length>0)addS(node);else selOne(node);
 if(node.isSelected&&!node.locked){isND=true;dNode=node;dOX=cx-node.x;dOY=cy-node.y;}
-}else{if(e.button===1||e.altKey){isPan=true;if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&!e.altKey)clrS();}else{if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey)clrS();isSel=true;sStart={x:cx,y:cy};sRect=null;}}
+}else{if(e.altKey){isPan=true;panStartX=vx;panStartY=vy;lMX=mx;lMY=my;isDrag=false;sR();}else{if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey)clrS();isSel=true;sStart={x:cx,y:cy};sRect=null;}}
 lMX=mx;lMY=my;isDrag=true;moved=false;sR();});
 
 canvas.addEventListener('pointermove',e=>{if(!window.PointerEvent||activePointerId!==e.pointerId)return;const{mx,my}=getLocalPoint(e);const{x:cx,y:cy}=s2c(mx,my);
+// Panning Logic
+if(isPan){vx=panStartX+(mx-lMX);vy=panStartY+(my-lMY);setCursor('grabbing');sR();return;}
 hNode=nAt(cx,cy);hCP=hNode?cpAt(hNode,cx,cy):null;
 if(isRz)setCursor(rzH.cursor);else if(isSB)setCursor('ns-resize');else if(isConn)setCursor('crosshair');else if(hCP&&e.shiftKey)setCursor('copy');else if(hNode){const rh=hNode._rh?.find(h=>cx>=h.x&&cx<=h.x+h.w&&cy>=h.y&&cy<=h.y+h.h);setCursor(rh?rh.cursor:(hNode.locked?'not-allowed':'grab'));}else setCursor('default');
 const dx=mx-lMX,dy=my-lMY;if(Math.abs(dx)>1||Math.abs(dy)>1)moved=true;applyDrag(cx,cy,dx,dy);lMX=mx;lMY=my;sR();});
