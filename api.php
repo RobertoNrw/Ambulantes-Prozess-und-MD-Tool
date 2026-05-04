@@ -2,6 +2,9 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, X-Write-Key');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 define('DATA_DIR', __DIR__ . '/data');
@@ -129,5 +132,33 @@ if ($action === 'revisions') {
     }
     usort($items, static fn($a,$b) => strcmp($b['updatedAt'], $a['updatedAt']));
     respond(['ok' => true, 'id' => $id, 'items' => $items]);
+}
+if ($action === 'restore') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') respond(['ok' => false, 'error' => 'Nur POST erlaubt'], 405);
+    check_write_key();
+    $body = body_json();
+    $revFile = $body['revisionFile'] ?? '';
+    if (!preg_match('/^[A-Za-z0-9_-]+__[0-9]{8}_[0-9]{6}__[0-9a-f]{3}\.json$/', $revFile)) respond(['ok' => false, 'error' => 'Ungültige Revisionsdatei'], 400);
+    $revPath = REVISION_DIR . '/' . $revFile;
+    if (!is_file($revPath)) respond(['ok' => false, 'error' => 'Revision nicht gefunden'], 404);
+    $revDoc = read_json_file($revPath);
+    $now = date('c');
+    $doc = ['id' => $id, 'createdAt' => $revDoc['createdAt'] ?? $now, 'updatedAt' => $now, 'version' => (int)($existing['version'] ?? 0) + 1, 'data' => $revDoc['data'] ?? ['nodes' => [], 'edges' => []]];
+    write_json_file($file, $doc);
+    respond(['ok' => true, 'id' => $id, 'restoredFrom' => $revFile, 'updatedAt' => $doc['updatedAt']]);
+}
+if ($action === 'rename') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') respond(['ok' => false, 'error' => 'Nur POST erlaubt'], 405);
+    check_write_key();
+    $body = body_json();
+    $newName = trim($body['name'] ?? '');
+    if ($newName === '') respond(['ok' => false, 'error' => 'Name darf nicht leer sein'], 400);
+    if (strlen($newName) > 200) respond(['ok' => false, 'error' => 'Name zu lang'], 400);
+    $metaFile = CANVAS_DIR . '/' . $id . '.meta.json';
+    $meta = is_file($metaFile) ? read_json_file($metaFile) : ['name' => 'Unbenanntes Canvas'];
+    $meta['name'] = $newName;
+    $meta['updatedAt'] = date('c');
+    write_json_file($metaFile, $meta);
+    respond(['ok' => true, 'id' => $id, 'name' => $newName]);
 }
 respond(['ok' => false, 'error' => 'Unbekannte action'], 404);
