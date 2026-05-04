@@ -160,6 +160,8 @@ let cStart=null,cStartPt=null,sStart={x:0,y:0},sRect=null,hNode=null,hCP=null;
 let rzN=null,rzH=null,rzSX=0,rzSY=0,rzSW=0,rzSH=0,rzNX=0,rzNY=0;
 let sbN=null,sbOff=0,clip=[],snap=false,hist=[],hIdx=-1,supH=false,rafP=false;
 let showGrid=true;
+let snapGuides=[]; // Für magnetische Führungslinien
+const SNAP_DIST = 8; // Snapping-Distanz in Weltkoordinaten
 
 const s2c=(sx,sy)=>({x:(sx-vx)/vs,y:(sy-vy)/vs});
 // ── FIX 1 angewendet in addN() ────────────────────────────────────────────
@@ -188,6 +190,10 @@ async function loadFromBackend(){try{const res=await apiGet('load',getCanvasId()
 async function saveToBackend(){try{const res=await apiPost('save',getCanvasId(),{data:expD()});if(res&&res.ok){const ts=Date.parse(res.updatedAt)||Date.now();try{localStorage.setItem('ic_v3_saved_at',String(ts));}catch(e){}setSaveIndicator('Server gespeichert · '+fmtSaveTime(ts),'#30D158');return true;}}catch(e){setSaveIndicator('Nur lokal gespeichert','#FF9F0A');}return false;}
 // ── setSaveIndicator ist nur einmal definiert (Bug 2 Fix: Duplikat entfernt) ──
 function uSB(){document.getElementById('node-count').textContent=nodes.length;document.getElementById('conn-count').textContent=conns.length;document.getElementById('zoom-display').textContent=Math.round(vs*100)+'%';}
+
+// ═══ SNAP GUIDES (MAGNETIC) ═══
+function calcSnapGuides(movingNodes){snapGuides=[];if(!movingNodes||!movingNodes.length)return;const others=nodes.filter(n=>!movingNodes.includes(n));if(!others.length)return;const hGuides=new Map(),vGuides=new Map();movingNodes.forEach(mn=>{const mEdges={t:mn.y,b:mn.y+mn.height,l:mn.x,r:mn.x+mn.width,cx:mn.x+mn.width/2,cy:mn.y+mn.height/2};others.forEach(on=>{const oEdges={t:on.y,b:on.y+on.height,l:on.x,r:on.x+on.width,cx:on.x+on.width/2,cy:on.y+on.height/2};for(const mk of Object.keys(mEdges)){for(const ok of Object.keys(oEdges)){const diff=mEdges[mk]-oEdges[ok];if(Math.abs(diff)<=SNAP_DIST){if(["t","b","cy"].includes(mk))hGuides.set(oEdges[ok],{y:oEdges[ok],type:"h"});else vGuides.set(oEdges[ok],{x:oEdges[ok],type:"v"});}}}})});snapGuides=[...hGuides.values(),...vGuides.values()];}
+function applySnap(node,dx,dy){calcSnapGuides([node]);if(snapGuides.length===0)return{dx,dy};let newDx=dx,newDy=dy,minDistX=Infinity,minDistY=Infinity;snapGuides.forEach(g=>{if(g.type==="h"){const d1=Math.abs((node.y+dy)-g.y);if(d1<minDistY){minDistY=d1;newDy=g.y-node.y;}const d2=Math.abs((node.y+node.height+dy)-g.y);if(d2<minDistY){minDistY=d2;newDy=g.y-node.y-node.height;}const d3=Math.abs((node.y+node.height/2+dy)-g.y);if(d3<minDistY){minDistY=d3;newDy=g.y-node.y-node.height/2;}}else{const d1=Math.abs((node.x+dx)-g.x);if(d1<minDistX){minDistX=d1;newDx=g.x-node.x;}const d2=Math.abs((node.x+node.width+dx)-g.x);if(d2<minDistX){minDistX=d2;newDx=g.x-node.x-node.width;}const d3=Math.abs((node.x+node.width/2+dx)-g.x);if(d3<minDistX){minDistX=d3;newDx=g.x-node.x-node.width/2;}}});return{dx:newDx,dy:newDy};}
 
 // ═══ HISTORY ═══
 function pH(){if(supH)return;const s=JSON.stringify({nodes:nodes.map(cN),conns});hist=hist.slice(0,hIdx+1);hist.push(s);if(hist.length>MAXH)hist.shift();hIdx=hist.length-1;}
@@ -398,6 +404,8 @@ for(let x=Math.floor(sx/GRID_MAJOR)*GRID_MAJOR;x<=ex;x+=GRID_MAJOR)for(let y=Mat
 if(sx<=0&&ex>=0&&sy<=0&&ey>=0){ctx.fillStyle=C('rgba(0,122,255,0.25)','rgba(0,122,255,0.2)');ctx.beginPath();ctx.arc(0,0,4,0,2*Math.PI);ctx.fill();}
 if(snap){ctx.fillStyle=C('rgba(0,122,255,0.2)','rgba(0,122,255,0.15)');
 for(let x=Math.floor(sx/SNAP)*SNAP;x<=ex;x+=SNAP)for(let y=Math.floor(sy/SNAP)*SNAP;y<=ey;y+=SNAP){ctx.beginPath();ctx.arc(x,y,1.2,0,2*Math.PI);ctx.fill();}}}
+// Snap-Guides zeichnen
+if(snapGuides.length>0){ctx.strokeStyle=C('rgba(0,122,255,0.4)','rgba(0,122,255,0.5)');ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();snapGuides.forEach(g=>{if(g.type==='h'){ctx.moveTo(sx,g.y);ctx.lineTo(ex,g.y);}else{ctx.moveTo(g.x,sy);ctx.lineTo(g.x,ey);}});ctx.stroke();ctx.setLineDash([]);}
 
 function render(){const dpr=window.devicePixelRatio||1,cssW=canvas.width/dpr,cssH=canvas.height/dpr;ctx.clearRect(0,0,cssW,cssH);ctx.fillStyle=C('#1c1c1e','#f2f2f7');ctx.fillRect(0,0,cssW,cssH);ctx.save();ctx.translate(vx,vy);ctx.scale(vs,vs);if(showGrid)drawGrid();
 nodes.filter(n=>n.type==='group').forEach(n=>drawNode(n));conns.forEach(c=>drawConn(c,selC&&selC.id===c.id));nodes.filter(n=>n.type!=='group').forEach(n=>drawNode(n));
@@ -528,7 +536,7 @@ switch(rzH.type){case'se':nw=Math.max(MNW,rzSW+ddx);nh=Math.max(MNH,rzSH+ddy);br
 rzN.x=nx;rzN.y=ny;rzN.width=nw;rzN.height=nh;}
 else if(isSB&&sbN){const sb=sbN._sb;if(sb){const rel=cy-sbOff-sb.y,mT=sb.h-sb.tH;sbN.scrollY=mT>0?(Math.max(0,Math.min(rel,mT))/mT)*sbN._ms:0;}}
 else if(isDrag){if(isSel){const mX=Math.min(sStart.x,cx),mY=Math.min(sStart.y,cy);sRect={x:mX,y:mY,w:Math.abs(cx-sStart.x),h:Math.abs(cy-sStart.y)};}
-else if(isND&&dNode){const ndx=(cx-dOX)-dNode.x,ndy=(cy-dOY)-dNode.y;selN.forEach(n=>{if(!n.locked){n.x=snV(n.x+ndx);n.y=snV(n.y+ndy);}});}
+else if(isND&&dNode){const ndx=(cx-dOX)-dNode.x,ndy=(cy-dOY)-dNode.y;selN.forEach(n=>{if(!n.locked){const snap=applySnap(n,ndx,ndy);n.x=snV(n.x+snap.dx);n.y=snV(n.y+snap.dy);}});}
 else if(isPan){vx+=dx;vy+=dy;}}}
 
 document.addEventListener('mouseup',e=>{if(window.PointerEvent)return;
@@ -544,7 +552,7 @@ if(isConn&&cStart){const r=canvas.getBoundingClientRect();const{x:cx,y:cy}=s2c(e
 if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();}
 isConn=false;cStart=null;cStartPt=null;setCursor('default');}
 if(isSel){if(sRect&&(sRect.w>4||sRect.h>4)){const sel=nInR(sRect.x,sRect.y,sRect.w,sRect.h);if(e.ctrlKey||e.metaKey||e.shiftKey)sel.forEach(n=>addS(n));else{clrS();sel.forEach(n=>addS(n));}}isSel=false;sRect=null;}
-if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();}
+if(dNode&&!moved)selOne(dNode);if(isND&&moved){snapGuides=[];pH();aS();}
 isDrag=false;isND=false;isPan=false;dNode=null;moved=false;sR();});
 
 let lastWheelTS=0;canvas.addEventListener('wheel',e=>{e.preventDefault();const now=performance.now();if(now-lastWheelTS<8)return;lastWheelTS=now;const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;const{x:cx,y:cy}=s2c(mx,my);const hn=nAt(cx,cy);
@@ -586,7 +594,7 @@ if(isConn&&cStart){const{mx,my}=getLocalPoint(e);const{x:cx,y:cy}=s2c(mx,my);con
 if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();}
 isConn=false;cStart=null;cStartPt=null;setCursor('default');}
 if(isSel){if(sRect&&(sRect.w>4||sRect.h>4)){const sel=nInR(sRect.x,sRect.y,sRect.w,sRect.h);if(e.ctrlKey||e.metaKey||e.shiftKey)sel.forEach(n=>addS(n));else{clrS();sel.forEach(n=>addS(n));}}isSel=false;sRect=null;}
-if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();}
+if(dNode&&!moved)selOne(dNode);if(isND&&moved){snapGuides=[];pH();aS();}
 isDrag=false;isND=false;isPan=false;dNode=null;moved=false;activePointerId=null;try{canvas.releasePointerCapture(e.pointerId);}catch(_){ }sR();});
 
 canvas.addEventListener('pointercancel',resetInteractionState);
