@@ -83,7 +83,7 @@
 .tpl-card{background:var(--accent-soft);border:1px solid var(--glass-border);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s;text-align:center}
 .tpl-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
 .tpl-card .tpl-icon{font-size:24px;margin-bottom:6px}.tpl-card .tpl-name{font-size:13px;font-weight:600;color:var(--text)}.tpl-card .tpl-desc{font-size:11px;color:var(--text3);margin-top:3px}
-#save-indicator{display:inline-flex;align-items:center;gap:6px;font-weight:500;opacity:.95;position:fixed;right:16px;bottom:180px;z-index:9089;padding:6px 10px;border-radius:10px;background:var(--surface);border:1px solid var(--glass-border);box-shadow:var(--shadow);color:var(--text2);font-size:12px;backdrop-filter:blur(20px)}
+#save-indicator{display:inline-flex;align-items:center;gap:6px;font-weight:500;opacity:.95;position:fixed;right:16px;bottom:200px;z-index:9089;padding:6px 10px;border-radius:10px;background:var(--surface);border:1px solid var(--glass-border);box-shadow:var(--shadow);color:var(--text2);font-size:12px;backdrop-filter:blur(20px)}
 #help-modal{position:fixed;inset:0;z-index:99000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px)}
 #custom-confirm{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px)}
 #cf-box{background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:24px;max-width:360px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px)}
@@ -116,7 +116,7 @@
 <div id="pw-screen"><div class="pw-logo">&#8734; <span>Canvas</span></div><div class="pw-box"><h2>Zugang</h2><p>Bitte PIN eingeben</p><input type="password" id="pw-input" class="pw-input" maxlength="8" placeholder="&#xB7;&#xB7;&#xB7;&#xB7;" autofocus><button class="pw-btn" id="pw-btn">&#214;ffnen</button><div class="pw-error" id="pw-error"></div></div></div>
 <canvas id="canvas"></canvas>
 <div id="toolbar" style="display:none">
-<span class="tb-logo">&#8734; Canvas</span><div class="tb-sep"></div>
+<span class="tb-logo">&#8734; Canvas</span><div class="tb-sep"></div><span id="canvas-name-display">Unbenanntes Canvas</span><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-add" title="Node hinzuf&#252;gen">&#65291; Node &#9662;<div id="add-dropdown"><div class="dd-item" data-type="text"><b>T</b><div><div>Text-Node</div><div class="dd-sub">Markdown</div></div></div><div class="dd-item" data-type="sticky"><b>S</b><div><div>Sticky Note</div><div class="dd-sub">Post-it</div></div></div><div class="dd-item" data-type="checklist"><b>&#10003;</b><div><div>Checkliste</div><div class="dd-sub">To-dos</div></div></div><div class="dd-item" data-type="group"><b>&#9633;</b><div><div>Gruppe</div><div class="dd-sub">Container</div></div></div><div class="dd-item" data-type="table"><b>&#8862;</b><div><div>Tabelle</div><div class="dd-sub">Zeilen &amp; Spalten</div></div></div><div class="dd-item" data-type="link"><b>&#128279;</b><div><div>Link-Bubble</div><div class="dd-sub">URL / Weblink</div></div></div><div class="dd-item" data-type="diamond"><b>&#9671;</b><div><div>Raute</div><div class="dd-sub">Entscheidung</div></div></div><div class="dd-item" data-type="ellipse"><b>&#11053;</b><div><div>Ellipse</div><div class="dd-sub">Prozess</div></div></div><div class="dd-item" data-type="hexagon"><b>&#11041;</b><div><div>Hexagon</div><div class="dd-sub">Modul</div></div></div></div></button>
 <button class="tb-btn" id="btn-undo" title="Undo">&#8617;</button><button class="tb-btn" id="btn-redo" title="Redo">&#8618;</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-snap" title="Snap">&#8862;</button><button class="tb-btn" id="btn-fit" title="Fit to Screen">&#8865;</button><div class="tb-sep"></div>
@@ -140,7 +140,7 @@
 const PW='2287';if(sessionStorage.getItem('ic_auth')==='1')unlockApp();
 document.getElementById('pw-btn').onclick=checkPw;document.getElementById('pw-input').onkeydown=e=>{if(e.key==='Enter')checkPw();};
 function checkPw(){const v=document.getElementById('pw-input').value;if(v===PW){sessionStorage.setItem('ic_auth','1');unlockApp();}else{document.getElementById('pw-input').classList.add('error');document.getElementById('pw-error').textContent='Falscher PIN';setTimeout(()=>{document.getElementById('pw-input').classList.remove('error');document.getElementById('pw-error').textContent='';},1200);}}
-function unlockApp(){document.getElementById('pw-screen').classList.add('hidden');document.getElementById('toolbar').style.display='flex';document.getElementById('statusbar').style.display='flex';document.getElementById('minimap').style.display='block';initCanvas();}
+function unlockApp(){document.getElementById('pw-screen').classList.add('hidden');document.getElementById('toolbar').style.display='flex';document.getElementById('statusbar').style.display='flex';document.getElementById('minimap').style.display='block';setCanvasName(getCanvasName());initCanvas();}
 
 // ═══ CORE ═══
 const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
@@ -179,6 +179,8 @@ function markSaved(ts=Date.now(),label='Lokal gespeichert'){try{localStorage.set
 function refreshSavedBadge(){try{const ts=Number(localStorage.getItem('ic_v3_saved_at')||0);if(ts)setSaveIndicator('Lokal gespeichert · '+fmtSaveTime(ts),'#30D158');}catch(e){}}
 const API_URL='api.php';
 function getCanvasId(){let id=localStorage.getItem('ic_canvas_id');if(!id){id='default';localStorage.setItem('ic_canvas_id',id);}return id;}
+function getCanvasName(){let name=localStorage.getItem('ic_canvas_name');if(!name){name='Unbenanntes Canvas';localStorage.setItem('ic_canvas_name',name);}return name;}
+function setCanvasName(name){localStorage.setItem('ic_canvas_name',name);const el=document.getElementById('canvas-name-display');if(el)el.textContent=name;}
 async function apiGet(action,id){const u=id?`${API_URL}?action=${action}&id=${encodeURIComponent(id)}`:`${API_URL}?action=${action}`;const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function apiPost(action,id,payload){const u=id?`${API_URL}?action=${action}&id=${encodeURIComponent(id)}`:`${API_URL}?action=${action}`;const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload||{})});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function loadFromBackend(){try{const res=await apiGet('load',getCanvasId());if(res&&res.ok&&res.exists&&res.data){const localTs=Number(localStorage.getItem('ic_v3_saved_at')||0);const serverTs=Date.parse(res.updatedAt)||0;if(serverTs>localTs){if(localTs>0&&!confirm('Server-Version ist neuer ('+fmtSaveTime(serverTs)+'). Lokale Änderungen werden überschrieben. Fortfahren?')){return false;}impD(res.data);const ts=serverTs||Date.now();try{localStorage.setItem('ic_v3_saved_at',String(ts));}catch(e){}setSaveIndicator('Server geladen · '+fmtSaveTime(ts),'#30D158');toast('Von Server geladen');}else{toast('Lokal aktuell');}return true;}}catch(e){console.error('Load failed:',e);}return false;}
@@ -478,12 +480,24 @@ window.addEventListener('resize',resizeCV);
 window.addEventListener('blur',resetInteractionState);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetInteractionState();});
 
 // ═══ INIT ═══
+let isPanMode = false; // Für Strg+Linke Maustaste Panning
+
 function initCanvas(){resizeCV();refreshSavedBadge();
 
 canvas.addEventListener('contextmenu',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();const{x:cx,y:cy}=s2c(e.clientX-r.left,e.clientY-r.top);showCM(e.clientX,e.clientY,nAt(cx,cy));});
 
 canvas.addEventListener('mousedown',e=>{if(window.PointerEvent)return;closeDD();closeCM();closeCLE();closeTblEd();
 const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;const{x:cx,y:cy}=s2c(mx,my);onCv=true;const node=nAt(cx,cy);
+
+// Strg + Linke Maustaste für Panning
+if(e.ctrlKey && e.button === 0 && !node){
+    isPanMode = true;
+    isPan = true;
+    lMX = mx;
+    lMY = my;
+    return;
+}
+
 if(!node){const c=cAt(cx,cy);if(c){clrS();selC=c;sR();return;}}
 if(node){
 if(node.type==='checklist'&&!e.shiftKey){const idx=chkAt(node,cx,cy);if(idx>=0){node.typeData.items[idx].checked=!node.typeData.items[idx].checked;pH();aS();sR();return;}}
@@ -513,6 +527,12 @@ else if(isND&&dNode){const ndx=(cx-dOX)-dNode.x,ndy=(cy-dOY)-dNode.y;selN.forEac
 else if(isPan){vx+=dx;vy+=dy;}}}
 
 document.addEventListener('mouseup',e=>{if(window.PointerEvent)return;
+// Strg+Linke Maustaste Panning beenden
+if(isPanMode){
+    isPanMode = false;
+    isPan = false;
+    return;
+}
 if(isRz){isRz=false;if(rzN){pH();aS();}rzN=null;rzH=null;sR();return;}
 if(isSB){isSB=false;sbN=null;sR();return;}
 if(isConn&&cStart){const r=canvas.getBoundingClientRect();const{x:cx,y:cy}=s2c(e.clientX-r.left,e.clientY-r.top);const target=nAt(cx,cy);
@@ -581,10 +601,10 @@ case'd':case'D':if(selN.length){e.preventDefault();dupN(selN.map(n=>({...cN(n)})
 case'l':case'L':if(!e.ctrlKey&&!e.metaKey&&selN.length){selN.forEach(n=>n.locked=!n.locked);toast(selN[0].locked?'🔒':'🔓');pH();aS();sR();e.preventDefault();}break;
 case'n':case'N':if(!e.ctrlKey&&!e.metaKey){const cx=(canvas.width/2-vx)/vs,cy=(canvas.height/2-vy)/vs;addN('text',cx-125,cy-60);e.preventDefault();}break;
 case'1':if(!e.ctrlKey&&!e.metaKey){fitAll();e.preventDefault();}break;
-case'ArrowLeft':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x-=step;});pH();aS();sR();e.preventDefault();}break;
-case'ArrowRight':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x+=step;});pH();aS();sR();e.preventDefault();}break;
-case'ArrowUp':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y-=step;});pH();aS();sR();e.preventDefault();}break;
-case'ArrowDown':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y+=step;});pH();aS();sR();e.preventDefault();}break;
+case'ArrowLeft':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x-=step;});pH();aS();sR();e.preventDefault();}else if(!e.ctrlKey&&!e.metaKey){vx+=step;sR();e.preventDefault();}break;
+case'ArrowRight':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x+=step;});pH();aS();sR();e.preventDefault();}else if(!e.ctrlKey&&!e.metaKey){vx-=step;sR();e.preventDefault();}break;
+case'ArrowUp':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y-=step;});pH();aS();sR();e.preventDefault();}else if(!e.ctrlKey&&!e.metaKey){vy+=step;sR();e.preventDefault();}break;
+case'ArrowDown':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y+=step;});pH();aS();sR();e.preventDefault();}else if(!e.ctrlKey&&!e.metaKey){vy-=step;sR();e.preventDefault();}break;
 }});
 
 // ═══ INLINE EDIT ═══
