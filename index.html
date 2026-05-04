@@ -83,8 +83,20 @@
 .tpl-card{background:var(--accent-soft);border:1px solid var(--glass-border);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s;text-align:center}
 .tpl-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
 .tpl-card .tpl-icon{font-size:24px;margin-bottom:6px}.tpl-card .tpl-name{font-size:13px;font-weight:600;color:var(--text)}.tpl-card .tpl-desc{font-size:11px;color:var(--text3);margin-top:3px}
-#save-indicator{display:inline-flex;align-items:center;gap:6px;font-weight:500;opacity:.95}
+#save-indicator{display:inline-flex;align-items:center;gap:6px;font-weight:500;opacity:.95;position:fixed;right:16px;bottom:180px;z-index:9089;padding:6px 10px;border-radius:10px;background:var(--surface);border:1px solid var(--glass-border);box-shadow:var(--shadow);color:var(--text2);font-size:12px;backdrop-filter:blur(20px)}
 #help-modal{position:fixed;inset:0;z-index:99000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px)}
+#custom-confirm{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px)}
+#cf-box{background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:24px;max-width:360px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px)}
+#cf-title{font-size:16px;margin-bottom:8px;color:var(--text)}
+#cf-msg{font-size:13px;color:var(--text2);margin-bottom:20px}
+#cf-btns{display:flex;gap:8px;justify-content:flex-end}
+#cf-cancel{padding:8px 16px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text2);font-size:13px;font-family:var(--font);cursor:pointer}
+#cf-ok{padding:8px 16px;border-radius:8px;border:none;background:var(--red);color:#fff;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer}
+#canvas-selector{position:fixed;top:12px;left:16px;z-index:9100;display:flex;align-items:center;gap:8px;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--r);padding:6px 10px;backdrop-filter:blur(40px);box-shadow:var(--shadow)}
+#canvas-select{background:transparent;border:none;outline:none;color:var(--text);font-size:13px;font-family:var(--font);font-weight:600;cursor:pointer;max-width:180px}
+#canvas-select option{background:var(--surface);color:var(--text)}
+#new-canvas-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-family:var(--font);font-weight:600;cursor:pointer}
+#new-canvas-btn:hover{opacity:.85}
 #help-modal.open{display:flex}
 #help-box{width:min(520px,92vw);background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px);overflow:hidden;max-height:80vh}
 #help-header{padding:16px 20px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;font-size:16px;font-weight:600;color:var(--text)}
@@ -100,6 +112,7 @@
 </style>
 </head>
 <body>
+<div id="canvas-selector" style="display:none"><select id="canvas-select"></select><button id="new-canvas-btn">+ Neu</button></div>
 <div id="pw-screen"><div class="pw-logo">&#8734; <span>Canvas</span></div><div class="pw-box"><h2>Zugang</h2><p>Bitte PIN eingeben</p><input type="password" id="pw-input" class="pw-input" maxlength="8" placeholder="&#xB7;&#xB7;&#xB7;&#xB7;" autofocus><button class="pw-btn" id="pw-btn">&#214;ffnen</button><div class="pw-error" id="pw-error"></div></div></div>
 <canvas id="canvas"></canvas>
 <div id="toolbar" style="display:none">
@@ -154,8 +167,7 @@ const snV=v=>snap?Math.round(v/SNAP)*SNAP:v;
 function sR(){if(!rafP){rafP=true;requestAnimationFrame(()=>{rafP=false;render();scheduleMM();});}}
 function toast(m,ms=1800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);}
 // Custom Confirm Dialog
-let _confirmResolve=null;
-function showConfirmDialog(title,msg){return new Promise(resolve=>{_confirmResolve=resolve;const d=document.createElement('div');d.id='custom-confirm';d.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px)';d.innerHTML='<div style=\"background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:24px;max-width:360px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px)\"><h3 style=\"font-size:16px;margin-bottom:8px;color:var(--text)\"">'+title+'</h3><p style=\"font-size:13px;color:var(--text2);margin-bottom:20px\">'+msg+'</p><div style=\"display:flex;gap:8px;justify-content:flex-end\"><button id=\"cf-cancel\" style=\"padding:8px 16px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text2);font-size:13px;font-family:var(--font);cursor:pointer\">Abbrechen</button><button id=\"cf-ok\" style=\"padding:8px 16px;border-radius:8px;border:none;background:var(--red);color:#fff;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer\">Löschen</button></div></div>';document.body.appendChild(d);document.getElementById('cf-cancel').onclick=()=>{document.body.removeChild(d);_confirmResolve=false);_confirmResolve=null;};document.getElementById('cf-ok').onclick=()=>{document.body.removeChild(d);_confirmResolve(true);_confirmResolve=null;};});}
+function showConfirmDialog(title,msg){return new Promise(resolve=>{const d=document.createElement('div');d.id='custom-confirm';d.innerHTML='<div id="cf-box"><h3 id="cf-title">'+title+'</h3><p id="cf-msg">'+msg+'</p><div id="cf-btns"><button id="cf-cancel">Abbrechen</button><button id="cf-ok">Löschen</button></div></div>';document.body.appendChild(d);document.getElementById('cf-cancel').onclick=()=>{document.body.removeChild(d);resolve(false);};document.getElementById('cf-ok').onclick=()=>{document.body.removeChild(d);resolve(true);};});}
 // Help Modal Functions
 function openHelp(){document.getElementById('help-modal').classList.add('open');}
 function closeHelp(){document.getElementById('help-modal').classList.remove('open');}
@@ -569,10 +581,10 @@ case'd':case'D':if(selN.length){e.preventDefault();dupN(selN.map(n=>({...cN(n)})
 case'l':case'L':if(!e.ctrlKey&&!e.metaKey&&selN.length){selN.forEach(n=>n.locked=!n.locked);toast(selN[0].locked?'🔒':'🔓');pH();aS();sR();e.preventDefault();}break;
 case'n':case'N':if(!e.ctrlKey&&!e.metaKey){const cx=(canvas.width/2-vx)/vs,cy=(canvas.height/2-vy)/vs;addN('text',cx-125,cy-60);e.preventDefault();}break;
 case'1':if(!e.ctrlKey&&!e.metaKey){fitAll();e.preventDefault();}break;
-case'ArrowLeft':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x-=step;});aS();pH();sR();e.preventDefault();}break;
-case'ArrowRight':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x+=step;});aS();pH();sR();e.preventDefault();}break;
-case'ArrowUp':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y-=step;});aS();pH();sR();e.preventDefault();}break;
-case'ArrowDown':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y+=step;});aS();pH();sR();e.preventDefault();}break;
+case'ArrowLeft':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x-=step;});pH();aS();sR();e.preventDefault();}break;
+case'ArrowRight':if(selN.length){selN.forEach(n=>{if(!n.locked)n.x+=step;});pH();aS();sR();e.preventDefault();}break;
+case'ArrowUp':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y-=step;});pH();aS();sR();e.preventDefault();}break;
+case'ArrowDown':if(selN.length){selN.forEach(n=>{if(!n.locked)n.y+=step;});pH();aS();sR();e.preventDefault();}break;
 }});
 
 // ═══ INLINE EDIT ═══
