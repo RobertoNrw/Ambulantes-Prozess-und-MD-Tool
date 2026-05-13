@@ -1,14 +1,35 @@
 <?php
 /**
- * Infinite Canvas API v3.2-improved
- * Fixes: Security, Rate Limiting, Collision Handling, Validation
+ * Infinite Canvas API v4.0
+ * Verbesserungen: Security, Rate Limiting, Collision Handling, Validation, CORS
  */
+
+// === SICHERHEIT: CORS nur für erlaubte Domains ===
+$allowed_origins = [];
+if (getenv('ALLOWED_ORIGINS')) {
+    $allowed_origins = array_map('trim', explode(',', getenv('ALLOWED_ORIGINS')));
+} else {
+    // Development fallback - in Production explizite Domains setzen!
+    $allowed_origins = ['http://localhost', 'http://127.0.0.1'];
+}
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowed_origins, true)) {
+    header("Access-Control-Allow-Origin: {$origin}");
+    header('Access-Control-Allow-Credentials: true');
+} else {
+    // Keine CORS Header für unbekannte Origins
+    header('Access-Control-Allow-Origin: ');
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
-header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Write-Key');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 1; mode=block');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { 
     http_response_code(204); 
@@ -19,11 +40,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 define('DATA_DIR', __DIR__ . '/data');
 define('CANVAS_DIR', DATA_DIR . '/canvases');
 define('REVISION_DIR', DATA_DIR . '/revisions');
+define('LOG_DIR', DATA_DIR . '/logs');
 define('MAX_BODY_BYTES', 5 * 1024 * 1024);
 define('MAX_REVISIONS_PER_CANVAS', 20);
 define('ENABLE_DELETE', true);
 define('REQUIRE_WRITE_KEY', getenv('API_KEY') ? true : false);  // Nur TRUE wenn .env var existiert
 define('WRITE_KEY', getenv('API_KEY') ?: 'dev-key-change-in-production');
+
+// === LOGGING: Zentrale Fehlerprotokollierung ===
+function log_error(string $message, array $context = []): void {
+    if (!is_dir(LOG_DIR)) {
+        @mkdir(LOG_DIR, 0755, true);
+    }
+    $log_file = LOG_DIR . '/error_' . date('Y-m-d') . '.log';
+    $entry = sprintf(
+        "[%s] %s %s - %s%s\n",
+        date('c'),
+        $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+        $_SERVER['REQUEST_URI'] ?? 'unknown',
+        $message,
+        $context ? ' | Context: ' . json_encode($context) : ''
+    );
+    @file_put_contents($log_file, $entry, FILE_APPEND | LOCK_EX);
+}
 
 // === VERBESSERUNGEN ===
 
@@ -124,14 +163,25 @@ function validate_canvas_data(array $data): bool {
  */
 
 function respond($payload, int $status = 200): void {
+    // Logging für Fehler
+    if ($status >= 400) {
+        log_error('API Error', [
+            'status' => $status,
+            'error' => $payload['error'] ?? 'unknown',
+            'action' => $_GET['action'] ?? 'unknown',
+            'canvas_id' => $_GET['id'] ?? 'unknown'
+        ]);
+    }
+    
     http_response_code($status);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
 function ensure_dirs(): void {
-    foreach ([DATA_DIR, CANVAS_DIR, REVISION_DIR] as $dir) {
+    foreach ([DATA_DIR, CANVAS_DIR, REVISION_DIR, LOG_DIR] as $dir) {
         if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+            log_error('Cannot create directory: ' . basename($dir));
             respond(['ok' => false, 'error' => 'Cannot create directory: ' . basename($dir)], 500);
         }
     }
