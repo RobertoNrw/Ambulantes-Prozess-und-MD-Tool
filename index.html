@@ -184,6 +184,19 @@ input, button {
 </div>
 
 
+<div id="add-dropdown" role="menu" aria-label="Node Typen">
+<div class="dd-item" data-type="image" role="menuitem" tabindex="-1"><b>🖼️</b><div><div>Bild</div><div class="dd-sub">Upload / Paste</div></div></div>
+<div class="dd-item" data-type="text" role="menuitem" tabindex="-1"><b>T</b><div><div>Text-Node</div><div class="dd-sub">Markdown</div></div></div>
+<div class="dd-item" data-type="sticky" role="menuitem" tabindex="-1"><b>S</b><div><div>Sticky Note</div><div class="dd-sub">Post-it</div></div></div>
+<div class="dd-item" data-type="checklist" role="menuitem" tabindex="-1"><b>✓</b><div><div>Checkliste</div><div class="dd-sub">To-dos</div></div></div>
+<div class="dd-item" data-type="group" role="menuitem" tabindex="-1"><b>■</b><div><div>Gruppe</div><div class="dd-sub">Container</div></div></div>
+<div class="dd-item" data-type="table" role="menuitem" tabindex="-1"><b>⊞</b><div><div>Tabelle</div><div class="dd-sub">Zeilen &amp; Spalten</div></div></div>
+<div class="dd-item" data-type="link" role="menuitem" tabindex="-1"><b>🔗</b><div><div>Link-Bubble</div><div class="dd-sub">URL / Weblink</div></div></div>
+<div class="dd-item" data-type="diamond" role="menuitem" tabindex="-1"><b>◇</b><div><div>Raute</div><div class="dd-sub">Entscheidung</div></div></div>
+<div class="dd-item" data-type="ellipse" role="menuitem" tabindex="-1"><b>⬭</b><div><div>Ellipse</div><div class="dd-sub">Prozess</div></div></div>
+<div class="dd-item" data-type="hexagon" role="menuitem" tabindex="-1"><b>⬡</b><div><div>Hexagon</div><div class="dd-sub">Modul</div></div></div>
+</div>
+
 <script>
 'use strict';
 document.getElementById('toolbar').style.display='flex';
@@ -614,7 +627,9 @@ function drawGrid(){
 }
 
 function render(){const dpr=window.devicePixelRatio||1,cssW=canvas.width/dpr,cssH=canvas.height/dpr;ctx.clearRect(0,0,cssW,cssH);ctx.fillStyle=C('#1c1c1e','#f2f2f7');ctx.fillRect(0,0,cssW,cssH);ctx.save();ctx.translate(vx,vy);ctx.scale(vs,vs);if(showGrid)drawGrid();
-nodes.filter(n=>n.type==='group').forEach(n=>drawNode(n));conns.forEach(c=>drawConn(c,selC&&selC.id===c.id));nodes.filter(n=>n.type!=='group').forEach(n=>drawNode(n));
+const margin=200,vl=-vx/vs-margin,vt=-vy/vs-margin,vr=vl+cssW/vs+margin*2,vb=vt+cssH/vs+margin*2;
+const inVP=n=>n.x+n.width>vl&&n.x<vr&&n.y+n.height>vt&&n.y<vb;
+nodes.filter(n=>n.type==='group'&&inVP(n)).forEach(n=>drawNode(n));conns.forEach(c=>drawConn(c,selC&&selC.id===c.id));nodes.filter(n=>n.type!=='group'&&inVP(n)).forEach(n=>drawNode(n));
 if(isConn&&cStart){const cp=cStartPt||{x:cStart.x+cStart.width/2,y:cStart.y+cStart.height/2};const mx=(lMX-vx)/vs,my=(lMY-vy)/vs;ctx.strokeStyle='#30D158';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(mx,my);ctx.stroke();ctx.setLineDash([]);}
 if(isSel&&sRect){ctx.fillStyle=C('rgba(0,122,255,0.06)','rgba(0,122,255,0.08)');ctx.fillRect(sRect.x,sRect.y,sRect.w,sRect.h);ctx.strokeStyle='#007AFF';ctx.lineWidth=1/vs;ctx.setLineDash([4/vs,3/vs]);ctx.strokeRect(sRect.x,sRect.y,sRect.w,sRect.h);ctx.setLineDash([]);}
 ctx.restore();uSB();}
@@ -1214,17 +1229,5 @@ document.getElementById('btn-tm').onclick = async () => {
 };
 $tmClose.onclick = () => $tmPicker.classList.remove('open');
 </script>
-<div id="add-dropdown" role="menu" aria-label="Node Typen">
-<div class="dd-item" data-type="image" role="menuitem" tabindex="-1"><b>🖼️</b><div><div>Bild</div><div class="dd-sub">Upload / Paste</div></div></div>
-<div class="dd-item" data-type="text" role="menuitem" tabindex="-1"><b>T</b><div><div>Text-Node</div><div class="dd-sub">Markdown</div></div></div>
-<div class="dd-item" data-type="sticky" role="menuitem" tabindex="-1"><b>S</b><div><div>Sticky Note</div><div class="dd-sub">Post-it</div></div></div>
-<div class="dd-item" data-type="checklist" role="menuitem" tabindex="-1"><b>✓</b><div><div>Checkliste</div><div class="dd-sub">To-dos</div></div></div>
-<div class="dd-item" data-type="group" role="menuitem" tabindex="-1"><b>■</b><div><div>Gruppe</div><div class="dd-sub">Container</div></div></div>
-<div class="dd-item" data-type="table" role="menuitem" tabindex="-1"><b>⊞</b><div><div>Tabelle</div><div class="dd-sub">Zeilen &amp; Spalten</div></div></div>
-<div class="dd-item" data-type="link" role="menuitem" tabindex="-1"><b>🔗</b><div><div>Link-Bubble</div><div class="dd-sub">URL / Weblink</div></div></div>
-<div class="dd-item" data-type="diamond" role="menuitem" tabindex="-1"><b>◇</b><div><div>Raute</div><div class="dd-sub">Entscheidung</div></div></div>
-<div class="dd-item" data-type="ellipse" role="menuitem" tabindex="-1"><b>⬭</b><div><div>Ellipse</div><div class="dd-sub">Prozess</div></div></div>
-<div class="dd-item" data-type="hexagon" role="menuitem" tabindex="-1"><b>⬡</b><div><div>Hexagon</div><div class="dd-sub">Modul</div></div></div>
-</div>
 </body>
 </html>
