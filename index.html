@@ -159,6 +159,7 @@ input, button {
 <button class="tb-btn" id="btn-png" title="Canvas als PNG exportieren (2× Auflösung)" role="button" aria-label="Als PNG exportieren" tabindex="0">↓ PNG</button><button class="tb-btn" id="btn-export" title="Canvas als JSON exportieren" role="button" aria-label="Als JSON exportieren" tabindex="0">↓ JSON</button><button class="tb-btn" id="btn-import" title="Canvas aus JSON-Datei importieren" role="button" aria-label="Importieren" tabindex="0">📂 Import</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-tm" title="Gespeicherte Versionen wiederherstellen" role="button" aria-label="Backups anzeigen" tabindex="0">🕰️ Backups</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-ai" title="AI Organizer - Muster erkennen & optimieren" role="button" aria-label="AI Optimierung" tabindex="0">🤖 AI</button><div class="tb-sep"></div>
+<button class="tb-btn" id="btn-interop" title="Interoperability Bridge - Export/Import & Integrationen" role="button" aria-label="Interoperabilität" tabindex="0">🔗 Bridge</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-theme" title="Zwischen Hell- und Dunkel-Modus wechseln" role="button" aria-label="Design wechseln" tabindex="0">🌙</button><button class="tb-btn danger" id="btn-clear" title="Gesamten Canvas löschen" role="button" aria-label="Canvas leeren" tabindex="0">🗑 Leeren</button>
 </div>
 <div id="statusbar" style="display:none"><span><b id="node-count">0</b> Nodes</span><span><b id="conn-count">0</b> Conn</span><span id="hint"><b>Dblclick</b>=Node · <b>Shift+Drag</b>=Connect · <b>⌘K</b>=Suche · <b>D</b>=Dup</span><span id="zoom-display" title="Reset" role="button" tabindex="0" aria-label="Zoom zurücksetzen">100%</span><span class="zoom-controls"><button id="zoom-out" role="button" aria-label="Herauszoomen" tabindex="0">−</button><button id="zoom-in" role="button" aria-label="Hereinzoomen" tabindex="0">+</button></span><span id="save-indicator"></span></div>
@@ -218,8 +219,101 @@ input, button {
   </div>
 </div>
 
+<!-- Interoperability Bridge Modal -->
+<div id="interop-picker" role="dialog" aria-modal="true" aria-labelledby="interop-title" style="position:fixed;inset:0;z-index:9950;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);">
+  <div id="interop-box" style="width:min(640px,92vw);background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px) saturate(180%);overflow:hidden;max-height:85vh;display:flex;flex-direction:column;">
+    <div id="interop-header" style="padding:14px 18px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px;">
+      <span id="interop-title">🔗 Interoperability Bridge</span>
+      <button id="interop-close" aria-label="Schließen" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:4px;transition:all .1s;">✕</button>
+    </div>
+    
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:1px solid var(--glass-border);background:var(--accent-soft);">
+      <button id="interop-export-tab" class="interop-tab-btn active" style="flex:1;padding:12px;border:none;background:transparent;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--accent);font-family:var(--font);">📤 Export</button>
+      <button id="interop-import-tab" class="interop-tab-btn" style="flex:1;padding:12px;border:none;background:transparent;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;font-family:var(--font);">📥 Import</button>
+      <button id="interop-refs-tab" class="interop-tab-btn" style="flex:1;padding:12px;border:none;background:transparent;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;font-family:var(--font);">🔍 Referenzen</button>
+    </div>
+    
+    <div id="interop-content" style="padding:18px;overflow-y:auto;flex:1;">
+      
+      <!-- Export Section -->
+      <div id="interop-export" style="display:block;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Wähle ein Format für den Export deiner Board-Daten:</div>
+        
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;">
+          <button class="export-format-btn" data-format="json" style="padding:14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--node-bg);color:var(--text);cursor:pointer;text-align:left;font-family:var(--font);transition:all .15s;">
+            <div style="font-weight:600;font-size:13px;margin-bottom:4px;">JSON</div>
+            <div style="font-size:10px;color:var(--text3);">Vollständige Datenstruktur</div>
+          </button>
+          <button class="export-format-btn" data-format="markdown" style="padding:14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--node-bg);color:var(--text);cursor:pointer;text-align:left;font-family:var(--font);transition:all .15s;">
+            <div style="font-weight:600;font-size:13px;margin-bottom:4px;">Markdown</div>
+            <div style="font-size:10px;color:var(--text3);">Lesbare Dokumentation</div>
+          </button>
+          <button class="export-format-btn" data-format="csv" style="padding:14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--node-bg);color:var(--text);cursor:pointer;text-align:left;font-family:var(--font);transition:all .15s;">
+            <div style="font-weight:600;font-size:13px;margin-bottom:4px;">CSV</div>
+            <div style="font-size:10px;color:var(--text3);">Tabellenkalkulation</div>
+          </button>
+          <button class="export-format-btn" data-format="mermaid" style="padding:14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--node-bg);color:var(--text);cursor:pointer;text-align:left;font-family:var(--font);transition:all .15s;">
+            <div style="font-weight:600;font-size:13px;margin-bottom:4px;">Mermaid</div>
+            <div style="font-size:10px;color:var(--text3);">Diagramm-Syntax</div>
+          </button>
+        </div>
+        
+        <div style="border-top:1px solid var(--glass-border);padding-top:14px;">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Schnellaktionen:</div>
+          <div style="display:flex;gap:8px;">
+            <button id="btn-copy-json" style="padding:8px 14px;border-radius:6px;border:1px solid var(--glass-border);background:transparent;color:var(--text);font-size:11px;cursor:pointer;font-family:var(--font);font-weight:500;">📋 JSON kopieren</button>
+            <button id="btn-generate-api" style="padding:8px 14px;border-radius:6px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);font-size:11px;cursor:pointer;font-family:var(--font);font-weight:500;">🔌 API Spec generieren</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Import Section -->
+      <div id="interop-import" style="display:none;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Importiere Daten aus externen Quellen:</div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+          <button id="btn-import-file" style="padding:20px;border-radius:10px;border:2px dashed var(--glass-border);background:var(--node-bg);color:var(--text);cursor:pointer;text-align:center;font-family:var(--font);transition:all .15s;">
+            <div style="font-size:20px;margin-bottom:6px;">📁</div>
+            <div style="font-weight:600;font-size:12px;">Datei importieren</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px;">JSON, Markdown, Mermaid</div>
+          </button>
+          <button id="btn-import-clipboard" style="padding:20px;border-radius:10px;border:2px dashed var(--glass-border);background:var(--node-bg);color:var(--text);cursor:pointer;text-align:center;font-family:var(--font);transition:all .15s;">
+            <div style="font-size:20px;margin-bottom:6px;">📋</div>
+            <div style="font-weight:600;font-size:12px;">Aus Clipboard</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px;">Strg+V Inhalt einfügen</div>
+          </button>
+        </div>
+        
+        <div style="background:var(--accent-soft);border-radius:8px;padding:12px;border:1px solid var(--glass-border);">
+          <div style="font-weight:600;font-size:11px;color:var(--text);margin-bottom:6px;">💡 Unterstützte Formate:</div>
+          <ul style="font-size:10px;color:var(--text3);margin-left:16px;line-height:1.6;">
+            <li><b>JSON:</b> Eigene Board-Exporte oder kompatible Strukturen</li>
+            <li><b>Markdown:</b> Strukturierte Listen mit Node-Typen</li>
+            <li><b>Mermaid:</b> Graph TD Diagramme aus Dokumentationen</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- References Section -->
+      <div id="interop-refs" style="display:none;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Automatisch erkannte externe Referenzen in deinem Board:</div>
+        <div id="interop-results-list" style="max-height:400px;overflow-y:auto;"></div>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+<style>
+.interop-tab-btn.active { color: var(--text) !important; border-bottom-color: var(--accent) !important; }
+.interop-tab-btn:hover:not(.active) { background: var(--accent-soft); color: var(--text) !important; }
+.export-format-btn:hover { border-color: var(--accent); background: var(--accent-soft) !important; transform: translateY(-2px); }
+#import-file:hover, #import-clipboard:hover { border-color: var(--accent); transform: translateY(-2px); }
+</style>
+
 <div id="rb-footer" style="position:fixed; bottom:0; left:0; right:0; height:22px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text3); z-index:9000; background:var(--glass); backdrop-filter:blur(20px); border-top:1px solid var(--glass-border); letter-spacing:0.5px; font-family:var(--font); font-weight:500;">
-&copy; 2026 Roberto Bonavita · v0.18 AI ORGANIZER · <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Cluster Detection</span>
+&copy; 2026 Roberto Bonavita · v0.19 INTEROP BRIDGE · <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Multi-Format Export/Import · ✓ Reference Detection</span>
 </div>
 
 
@@ -276,6 +370,16 @@ const $aiClose=document.getElementById('ai-close');
 const $aiResults=document.getElementById('ai-results');
 const $aiResultsList=document.getElementById('ai-results-list');
 const $aiActions=document.getElementById('ai-actions');
+// Interoperability Bridge DOM Elements
+const $interopPicker=document.getElementById('interop-picker');
+const $interopClose=document.getElementById('interop-close');
+const $interopExport=document.getElementById('interop-export');
+const $interopImport=document.getElementById('interop-import');
+const $interopRefs=document.getElementById('interop-refs');
+const $interopExportTab=document.getElementById('interop-export-tab');
+const $interopImportTab=document.getElementById('interop-import-tab');
+const $interopRefsTab=document.getElementById('interop-refs-tab');
+const $interopResultsList=document.getElementById('interop-results-list');
 const SNAP=20,GRID=20,GRID_MAJOR=100,MAXH=60,MNW=80,MNH=60;
 
 // ===== STORAGE MANAGER (v0.17 Improvement) =====
@@ -1574,6 +1678,530 @@ style.textContent = '@keyframes spin{0%{transform:rotate(0deg);}100%{transform:r
 document.head.appendChild(style);
 
 // ===== END AI ORGANIZER =====
+
+// ===== SMART INTEROPERABILITY BRIDGE v0.19 =====
+// Externe Integrationen, API-Generierung & Cross-Tool Kommunikation
+
+const InteropBridge = {
+  // Konfiguration für externe Dienste
+  integrations: {
+    notion: { enabled: false, apiKey: '', databaseId: '' },
+    trello: { enabled: false, apiKey: '', token: '' },
+    github: { enabled: false, token: '', repo: '' },
+    slack: { enabled: false, webhookUrl: '' },
+    obsidian: { enabled: false, vaultPath: '' }
+  },
+  
+  // Generiert eine REST API für das Board (lokal)
+  generateLocalAPI() {
+    const apiEndpoint = 'board-api://localhost';
+    const swaggerSpec = {
+      openapi: '3.0.0',
+      info: {
+        title: 'Infinite Canvas Board API',
+        version: '0.19',
+        description: 'Automatisch generierte API für Board-Daten'
+      },
+      servers: [{ url: apiEndpoint }],
+      paths: {
+        '/nodes': {
+          get: { summary: 'Alle Nodes abrufen', responses: { '200': { description: 'Erfolgreich' } } },
+          post: { summary: 'Neuen Node erstellen', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } } }
+        },
+        '/connections': {
+          get: { summary: 'Alle Connections abrufen' },
+          post: { summary: 'Neue Connection erstellen' }
+        },
+        '/export': {
+          get: { summary: 'Komplettes Board exportieren' }
+        },
+        '/import': {
+          post: { summary: 'Board-Daten importieren' }
+        }
+      }
+    };
+    
+    return { endpoint: apiEndpoint, spec: swaggerSpec };
+  },
+  
+  // Exportiert Board-Daten in verschiedene Formate
+  exportToFormat(format) {
+    const data = {
+      nodes: nodes.map(n => ({ id: n.id, text: n.text, x: n.x, y: n.y, type: n.type, color: n.color })),
+      connections: conns.map(c => ({ from: c.from, to: c.to, label: c.label })),
+      metadata: { exportedAt: new Date().toISOString(), version: '0.19' }
+    };
+    
+    switch(format) {
+      case 'json':
+        return JSON.stringify(data, null, 2);
+      
+      case 'markdown':
+        let md = '# Board Export\n\n';
+        md += '## Nodes\n\n';
+        data.nodes.forEach((n, i) => {
+          md += `${i + 1}. **${n.text}** (${n.type}) - Position: (${Math.round(n.x)}, ${Math.round(n.y)})\n`;
+        });
+        md += '\n## Connections\n\n';
+        data.connections.forEach(c => {
+          const fromNode = data.nodes.find(n => n.id === c.from);
+          const toNode = data.nodes.find(n => n.id === c.to);
+          if (fromNode && toNode) {
+            md += `- ${fromNode.text} → ${toNode.text}${c.label ? ` (${c.label})` : ''}\n`;
+          }
+        });
+        return md;
+      
+      case 'csv':
+        let csv = 'ID,Text,Type,X,Y,Color\n';
+        data.nodes.forEach(n => {
+          csv += `"${n.id}","${n.text.replace(/"/g, '""')}","${n.type}",${n.x},${n.y},"${n.color}"\n`;
+        });
+        return csv;
+      
+      case 'mermaid':
+        let mermaid = 'graph TD\n';
+        data.nodes.forEach(n => {
+          const nodeId = `N${n.id.replace(/-/g, '')}`;
+          mermaid += `  ${nodeId}[${n.text}]:::${n.type}\n`;
+        });
+        data.connections.forEach(c => {
+          const fromId = `N${c.from.replace(/-/g, '')}`;
+          const toId = `N${c.to.replace(/-/g, '')}`;
+          mermaid += `  ${fromId} -->|${c.label || ''}| ${toId}\n`;
+        });
+        mermaid += '\nclassDef idea fill:#f9f,stroke:#333;\nclassDef task fill:#bbf,stroke:#333;\nclassDef note fill:#bfb,stroke:#333;\n';
+        return mermaid;
+      
+      default:
+        return JSON.stringify(data);
+    }
+  },
+  
+  // Importiert Daten aus externen Quellen
+  async importFromFormat(format, inputData) {
+    try {
+      let importedData;
+      
+      if (format === 'json') {
+        importedData = typeof inputData === 'string' ? JSON.parse(inputData) : inputData;
+      } else if (format === 'markdown') {
+        // Einfacher Markdown Parser
+        importedData = { nodes: [], connections: [] };
+        const lines = inputData.split('\n');
+        let nodeIndex = 0;
+        
+        lines.forEach(line => {
+          const nodeMatch = line.match(/^\d+\.\s+\*\*(.+?)\*\*\s+\((.+?)\)/);
+          if (nodeMatch) {
+            importedData.nodes.push({
+              id: `imp-${Date.now()}-${nodeIndex++}`,
+              text: nodeMatch[1],
+              type: nodeMatch[2].toLowerCase(),
+              x: Math.random() * 800,
+              y: Math.random() * 600,
+              color: '#ffffff'
+            });
+          }
+        });
+      } else if (format === 'mermaid') {
+        // Mermaid Parser
+        importedData = { nodes: [], connections: [] };
+        const nodeMap = {};
+        let nodeIndex = 0;
+        
+        const nodeLines = inputData.match(/(\w+)\[(.+?)\]/g) || [];
+        nodeLines.forEach(line => {
+          const match = line.match(/(\w+)\[(.+?)\]/);
+          if (match) {
+            const nodeId = `imp-${Date.now()}-${nodeIndex++}`;
+            nodeMap[match[1]] = nodeId;
+            importedData.nodes.push({
+              id: nodeId,
+              text: match[2],
+              type: 'idea',
+              x: Math.random() * 800,
+              y: Math.random() * 600,
+              color: '#ffffff'
+            });
+          }
+        });
+        
+        const connLines = inputData.match(/(\w+)\s+-->.*?\s+(\w+)/g) || [];
+        connLines.forEach(line => {
+          const parts = line.split('-->');
+          if (parts.length >= 2) {
+            const fromId = parts[0].trim();
+            const toPart = parts[1].trim();
+            const toId = toPart.match(/^\|.*?\|\s*(\w+)/)?.[1] || toPart.match(/(\w+)$/)?.[1];
+            
+            if (fromId && toId && nodeMap[fromId] && nodeMap[toId]) {
+              importedData.connections.push({
+                from: nodeMap[fromId],
+                to: nodeMap[toId],
+                label: ''
+              });
+            }
+          }
+        });
+      }
+      
+      if (importedData && importedData.nodes) {
+        pH(); // History Punkt
+        importedData.nodes.forEach(n => {
+          nodes.push({
+            id: n.id || `imp-${Date.now()}-${Math.random()}`,
+            text: n.text || 'Importierter Node',
+            x: snV(n.x || Math.random() * 500),
+            y: snV(n.y || Math.random() * 500),
+            width: 240,
+            height: 140,
+            type: n.type || 'note',
+            color: n.color || '#ffffff',
+            items: n.items || []
+          });
+        });
+        
+        if (importedData.connections) {
+          importedData.connections.forEach(c => {
+            conns.push({
+              id: `conn-${Date.now()}-${Math.random()}`,
+              from: c.from,
+              to: c.to,
+              label: c.label || ''
+            });
+          });
+        }
+        
+        sR();
+        aS();
+        toast(`✅ ${importedData.nodes.length} Nodes importiert`);
+        return { success: true, count: importedData.nodes.length };
+      }
+      
+      return { success: false, error: 'Keine gültigen Daten gefunden' };
+      
+    } catch (error) {
+      console.error('Import Fehler:', error);
+      toast('❌ Import fehlgeschlagen: ' + error.message);
+      return { success: false, error: error.message };
+    }
+  },
+  
+  // Semantische Verbindungen zu externen Tools herstellen
+  detectExternalReferences() {
+    const references = {
+      urls: [],
+      emails: [],
+      files: [],
+      mentions: [],
+      tags: []
+    };
+    
+    nodes.forEach(node => {
+      const text = node.text || '';
+      
+      // URLs finden
+      const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/g;
+      const urls = text.match(urlRegex) || [];
+      urls.forEach(url => {
+        references.urls.push({ nodeId: node.id, url, domain: new URL(url).hostname });
+      });
+      
+      // Emails finden
+      const emailRegex = /[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+      const emails = text.match(emailRegex) || [];
+      emails.forEach(email => {
+        references.emails.push({ nodeId: node.id, email });
+      });
+      
+      // @Mentions finden
+      const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
+      const mentions = text.match(mentionRegex) || [];
+      mentions.forEach(mention => {
+        references.mentions.push({ nodeId: node.id, user: mention.substring(1) });
+      });
+      
+      // #Tags finden
+      const tagRegex = /#([a-zA-Z0-9_-]+)/g;
+      const tags = text.match(tagRegex) || [];
+      tags.forEach(tag => {
+        references.tags.push({ nodeId: node.id, tag: tag.substring(1) });
+      });
+    });
+    
+    return references;
+  },
+  
+  // Zeigt gefundene Referenzen im UI an
+  renderReferences(references) {
+    $interopResultsList.innerHTML = '';
+    
+    let hasContent = false;
+    
+    if (references.urls.length > 0) {
+      hasContent = true;
+      const section = document.createElement('div');
+      section.style.cssText = 'margin-bottom:20px;';
+      section.innerHTML = `<div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:8px;">🔗 Gefundene Links (${references.urls.length})</div>`;
+      
+      const list = document.createElement('div');
+      list.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+      
+      references.urls.slice(0, 10).forEach(ref => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:8px;border-radius:6px;background:var(--accent-soft);display:flex;justify-content:space-between;align-items:center;';
+        item.innerHTML = `
+          <div style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%;">
+            <span style="color:var(--text3);">${ref.domain}</span>
+          </div>
+          <button class="ref-goto-btn" data-node-id="${ref.nodeId}" style="padding:4px 8px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:10px;cursor:pointer;font-family:var(--font);">Go To</button>
+        `;
+        list.appendChild(item);
+      });
+      
+      section.appendChild(list);
+      $interopResultsList.appendChild(section);
+    }
+    
+    if (references.mentions.length > 0) {
+      hasContent = true;
+      const section = document.createElement('div');
+      section.style.cssText = 'margin-bottom:20px;';
+      section.innerHTML = `<div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:8px;">👥 Erwähnungen (${references.mentions.length})</div>`;
+      
+      const users = [...new Set(references.mentions.map(m => m.user))];
+      const userCloud = document.createElement('div');
+      userCloud.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+      
+      users.forEach(user => {
+        const count = references.mentions.filter(m => m.user === user).length;
+        const badge = document.createElement('div');
+        badge.style.cssText = 'padding:6px 12px;border-radius:16px;background:var(--accent-soft);border:1px solid var(--glass-border);font-size:11px;color:var(--text);';
+        badge.innerHTML = `@${user} <span style="color:var(--text3);">(${count}x)</span>`;
+        userCloud.appendChild(badge);
+      });
+      
+      section.appendChild(userCloud);
+      $interopResultsList.appendChild(section);
+    }
+    
+    if (references.tags.length > 0) {
+      hasContent = true;
+      const section = document.createElement('div');
+      section.style.cssText = 'margin-bottom:20px;';
+      section.innerHTML = `<div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:8px;">🏷️ Tags (${references.tags.length})</div>`;
+      
+      const tags = [...new Set(references.tags.map(t => t.tag))];
+      const tagCloud = document.createElement('div');
+      tagCloud.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+      
+      tags.forEach(tag => {
+        const count = references.tags.filter(t => t.tag === tag).length;
+        const badge = document.createElement('div');
+        badge.style.cssText = 'padding:6px 12px;border-radius:16px;background:rgba(48,209,88,0.15);border:1px solid rgba(48,209,88,0.3);font-size:11px;color:var(--text);';
+        badge.innerHTML = `#${tag} <span style="color:var(--text3);">(${count}x)</span>`;
+        tagCloud.appendChild(badge);
+      });
+      
+      section.appendChild(tagCloud);
+      $interopResultsList.appendChild(section);
+    }
+    
+    if (!hasContent) {
+      $interopResultsList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Keine externen Referenzen gefunden.</div>';
+    }
+    
+    // GoTo Buttons funktional machen
+    setTimeout(() => {
+      document.querySelectorAll('.ref-goto-btn').forEach(btn => {
+        btn.onclick = () => {
+          const nodeId = btn.dataset.nodeId;
+          const node = nodes.find(n => n.id === nodeId);
+          if (node) {
+            vx = -(node.x + node.width/2 - window.innerWidth/2);
+            vy = -(node.y + node.height/2 - window.innerHeight/2);
+            vs = 1.2;
+            sR();
+            $interopPicker.style.display = 'none';
+            toast('Node hervorgehoben 🔍');
+          }
+        };
+      });
+    }, 0);
+  },
+  
+  // Webhook Sender für externe Dienste
+  async sendWebhook(url, payload) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (response.ok) {
+        toast('✅ Webhook erfolgreich gesendet');
+        return { success: true };
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      toast('❌ Webhook Fehler: ' + error.message);
+      return { success: false, error: error.message };
+    }
+  }
+};
+
+// UI für Interoperability Bridge
+document.getElementById('btn-interop').onclick = () => {
+  $interopPicker.style.display = 'flex';
+  $interopExport.style.display = 'block';
+  $interopImport.style.display = 'none';
+  $interopRefs.style.display = 'none';
+};
+
+$interopClose.onclick = () => {
+  $interopPicker.style.display = 'none';
+};
+
+// Tab Switching
+$interopExportTab.onclick = () => {
+  $interopExport.style.display = 'block';
+  $interopImport.style.display = 'none';
+  $interopRefs.style.display = 'none';
+  $interopExportTab.classList.add('active');
+  $interopImportTab.classList.remove('active');
+  $interopRefsTab.classList.remove('active');
+};
+
+$interopImportTab.onclick = () => {
+  $interopExport.style.display = 'none';
+  $interopImport.style.display = 'block';
+  $interopRefs.style.display = 'none';
+  $interopExportTab.classList.remove('active');
+  $interopImportTab.classList.add('active');
+  $interopRefsTab.classList.remove('active');
+};
+
+$interopRefsTab.onclick = () => {
+  $interopExport.style.display = 'none';
+  $interopImport.style.display = 'none';
+  $interopRefs.style.display = 'block';
+  $interopExportTab.classList.remove('active');
+  $interopImportTab.classList.remove('active');
+  $interopRefsTab.classList.add('active');
+  
+  // Referenzen analysieren
+  const refs = InteropBridge.detectExternalReferences();
+  InteropBridge.renderReferences(refs);
+};
+
+// Export Format Selection
+document.querySelectorAll('.export-format-btn').forEach(btn => {
+  btn.onclick = () => {
+    const format = btn.dataset.format;
+    const data = InteropBridge.exportToFormat(format);
+    
+    // Download auslösen
+    const blob = new Blob([data], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `board-export-${new Date().toISOString().split('T')[0]}.${format === 'mermaid' ? 'md' : format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast(`📥 Export als ${format.toUpperCase()} gestartet`);
+  };
+});
+
+// Copy to Clipboard
+document.getElementById('btn-copy-json').onclick = () => {
+  const data = InteropBridge.exportToFormat('json');
+  navigator.clipboard.writeText(data).then(() => {
+    toast('📋 JSON in Zwischenablage kopiert');
+  }).catch(err => {
+    toast('❌ Kopieren fehlgeschlagen');
+  });
+};
+
+// Import Handler
+document.getElementById('btn-import-file').onclick = () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,.md,.txt';
+  
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const content = event.target.result;
+      const format = file.name.endsWith('.md') ? 'mermaid' : 'json';
+      
+      const result = await InteropBridge.importFromFormat(format, content);
+      if (result.success) {
+        $interopPicker.style.display = 'none';
+      }
+    };
+    reader.readAsText(file);
+  };
+  
+  input.click();
+};
+
+// Paste from Clipboard
+document.getElementById('btn-import-clipboard').onclick = async () => {
+  try {
+    const content = await navigator.clipboard.readText();
+    
+    // Format automatisch erkennen
+    let format = 'json';
+    if (content.trim().startsWith('graph')) {
+      format = 'mermaid';
+    } else if (content.includes('#') && content.includes('##')) {
+      format = 'markdown';
+    }
+    
+    const result = await InteropBridge.importFromFormat(format, content);
+    if (result.success) {
+      $interopPicker.style.display = 'none';
+    }
+  } catch (error) {
+    toast('❌ Zugriff auf Zwischenablage nicht möglich');
+  }
+};
+
+// API Generator
+document.getElementById('btn-generate-api').onclick = () => {
+  const api = InteropBridge.generateLocalAPI();
+  
+  const swaggerJson = JSON.stringify(api.spec, null, 2);
+  const blob = new Blob([swaggerJson], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'board-api-spec.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  toast('🔌 API Spec heruntergeladen');
+};
+
+// Close on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $interopPicker.style.display === 'flex') {
+    $interopPicker.style.display = 'none';
+  }
+});
+
+// ===== END INTEROPERABILITY BRIDGE =====
 
 </script>
 </body>
