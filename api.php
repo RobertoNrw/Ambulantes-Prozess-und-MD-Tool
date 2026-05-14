@@ -4,10 +4,9 @@
  * Verbesserte Fehlerbehandlung und Debugging
  */
 
-// === DEBUG MODE: Fehler direkt anzeigen zum Testen ===
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
 
 // === SICHERHEIT: CORS nur für erlaubte Domains ===
 $allowed_origins = [];
@@ -32,8 +31,7 @@ if (in_array($origin, $allowed_origins, true)) {
     header("Access-Control-Allow-Origin: {$origin}");
     header('Access-Control-Allow-Credentials: true');
 } else {
-    // Für Debugging: Wenn Origin leer ist oder localhost, trotzdem erlauben
-    if (empty($origin) || strpos($origin, 'localhost') !== false) {
+    if (empty($origin) || in_array($origin, ['http://localhost', 'http://127.0.0.1', 'http://localhost:8080'], true)) {
         header("Access-Control-Allow-Origin: {$origin}");
     } else {
         header('Access-Control-Allow-Origin: ');
@@ -130,7 +128,7 @@ try {
     echo json_encode([
         'error' => $e->getMessage(),
         'debug' => $debug_info,
-        'suggestion' => 'Stelle sicher dass der Webserver (www-data) Schreibrechte auf dem data/ Ordner hat. Führe aus: chmod -R 775 data/ && chown -R www-www-data data/'
+        'suggestion' => 'Stelle sicher dass der Webserver (www-data) Schreibrechte auf dem data/ Ordner hat. Führe aus: chmod -R 775 data/ && chown -R www-data:www-data data/'
     ]);
     exit;
 }
@@ -199,7 +197,7 @@ function validate_canvas_data(array $data): bool {
     if (!isset($data['nodes']) || !is_array($data['nodes'])) {
         return false;
     }
-    if (!isset($data['conns']) || !is_array($data['conns'])) {
+    if (!isset($data['edges']) || !is_array($data['edges'])) {
         return false;
     }
     
@@ -349,7 +347,7 @@ if ($action === 'health') {
     respond([
         'ok' => true, 
         'service' => 'canvas-api', 
-        'version' => '3.2-improved',
+        'version' => '4.1',
         'php' => PHP_VERSION, 
         'time' => date('c'), 
         'writeProtected' => REQUIRE_WRITE_KEY ? 'yes' : 'no (ENTWICKLUNG)',
@@ -399,7 +397,9 @@ if ($action === 'save') {
         respond(['ok' => false, 'error' => 'Missing field: data'], 400);
     }
     
-    validate_canvas_data($data);  // ← HINZUGEFÜGT
+    if (!validate_canvas_data($data)) {
+        respond(['ok' => false, 'error' => 'Invalid canvas data structure'], 400);
+    }
 
     $existing = is_file($file) ? read_json_file($file) : null;
     $now = date('c');
