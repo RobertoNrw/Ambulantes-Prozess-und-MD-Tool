@@ -205,7 +205,7 @@ function validate_canvas_data(array $data): bool {
     if (count($data['nodes']) > 5000) {
         respond(['ok' => false, 'error' => 'Too many nodes (max 5000)'], 400);
     }
-    if (count($data['conns']) > 10000) {
+    if (count($data['edges']) > 10000) {
         respond(['ok' => false, 'error' => 'Too many connections (max 10000)'], 400);
     }
     
@@ -327,13 +327,13 @@ function body_json(): array {
 }
 
 function canvas_summary(array $doc, string $id, string $file): array {
-    $data = $doc['data'] ?? ['nodes' => [], 'conns' => []];
+    $data = $doc['data'] ?? ['nodes' => [], 'edges' => []];
     return [
         'id' => $id,
         'updatedAt' => $doc['updatedAt'] ?? null,
         'createdAt' => $doc['createdAt'] ?? null,
         'nodeCount' => is_array($data['nodes'] ?? null) ? count($data['nodes']) : 0,
-        'connCount' => is_array($data['conns'] ?? null) ? count($data['conns']) : 0,
+        'connCount' => is_array($data['edges'] ?? null) ? count($data['edges']) : 0,
         'bytes' => is_file($file) ? filesize($file) : 0,
     ];
 }
@@ -378,7 +378,7 @@ if ($action === 'load') {
         'updatedAt' => $doc['updatedAt'] ?? null, 
         'createdAt' => $doc['createdAt'] ?? null, 
         'version' => $doc['version'] ?? 0,
-        'data' => $doc['data'] ?? ['nodes' => [], 'conns' => []]
+        'data' => $doc['data'] ?? ['nodes' => [], 'edges' => []]
     ]);
 }
 
@@ -422,8 +422,8 @@ if ($action === 'save') {
         'id' => $id, 
         'updatedAt' => $doc['updatedAt'], 
         'version' => $doc['version'], 
-        'nodeCount' => count($data['nodes']), 
-        'connCount' => count($data['conns'])
+        'nodeCount' => count($data['nodes']),
+        'connCount' => count($data['edges'])
     ]);
 }
 
@@ -499,7 +499,7 @@ if ($action === 'restore') {
         'createdAt' => $revDoc['createdAt'] ?? $now, 
         'updatedAt' => $now, 
         'version' => (int)($existing['version'] ?? 0) + 1, 
-        'data' => $revDoc['data'] ?? ['nodes' => [], 'conns' => []]
+        'data' => $revDoc['data'] ?? ['nodes' => [], 'edges' => []]
     ];
 
     write_json_file($file, $doc);
