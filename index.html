@@ -160,6 +160,7 @@ input, button {
 <button class="tb-btn" id="btn-tm" title="Gespeicherte Versionen wiederherstellen" role="button" aria-label="Backups anzeigen" tabindex="0">🕰️ Backups</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-ai" title="AI Organizer - Muster erkennen & optimieren" role="button" aria-label="AI Optimierung" tabindex="0">🤖 AI</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-interop" title="Interoperability Bridge - Export/Import & Integrationen" role="button" aria-label="Interoperabilität" tabindex="0">🔗 Bridge</button><div class="tb-sep"></div>
+<button class="tb-btn" id="btn-share" title="P2P Share - Daten per Drag & Drop austauschen" role="button" aria-label="P2P Share" tabindex="0">📤 Share</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-theme" title="Zwischen Hell- und Dunkel-Modus wechseln" role="button" aria-label="Design wechseln" tabindex="0">🌙</button><button class="tb-btn danger" id="btn-clear" title="Gesamten Canvas löschen" role="button" aria-label="Canvas leeren" tabindex="0">🗑 Leeren</button>
 </div>
 <div id="statusbar" style="display:none"><span><b id="node-count">0</b> Nodes</span><span><b id="conn-count">0</b> Conn</span><span id="hint"><b>Dblclick</b>=Node · <b>Shift+Drag</b>=Connect · <b>⌘K</b>=Suche · <b>D</b>=Dup</span><span id="zoom-display" title="Reset" role="button" tabindex="0" aria-label="Zoom zurücksetzen">100%</span><span class="zoom-controls"><button id="zoom-out" role="button" aria-label="Herauszoomen" tabindex="0">−</button><button id="zoom-in" role="button" aria-label="Hereinzoomen" tabindex="0">+</button></span><span id="save-indicator"></span></div>
@@ -310,10 +311,151 @@ input, button {
 .interop-tab-btn:hover:not(.active) { background: var(--accent-soft); color: var(--text) !important; }
 .export-format-btn:hover { border-color: var(--accent); background: var(--accent-soft) !important; transform: translateY(-2px); }
 #import-file:hover, #import-clipboard:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+/* P2P Share Dock Styles - Apple-like Design */
+#share-dock {
+  position: fixed;
+  bottom: 34px;
+  right: 12px;
+  z-index: 9080;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+#share-dock.open { display: flex; }
+.share-dock-main {
+  width: 280px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(40px) saturate(180%);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.share-dock-header {
+  padding: 12px 16px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.share-dock-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.share-dock-close {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.share-dock-close:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.share-dock-content {
+  padding: 14px;
+}
+.share-drop-zone {
+  border: 2px dashed var(--glass-border);
+  border-radius: 12px;
+  padding: 24px 16px;
+  text-align: center;
+  background: var(--node-bg);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.share-drop-zone:hover, .share-drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: scale(1.02);
+}
+.share-drop-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  opacity: 0.7;
+}
+.share-drop-text {
+  font-size: 12px;
+  color: var(--text2);
+  font-weight: 500;
+}
+.share-drop-hint {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 6px;
+}
+.share-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.share-action-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: var(--node-bg);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.share-action-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-2px);
+}
+.share-action-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.share-action-btn.primary:hover {
+  opacity: 0.9;
+}
+.share-status {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  font-size: 11px;
+  color: var(--text2);
+  text-align: center;
+}
+.share-code-display {
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+  font-size: 10px;
+  color: var(--text3);
+  word-break: break-all;
+  max-height: 80px;
+  overflow-y: auto;
+}
 </style>
 
 <div id="rb-footer" style="position:fixed; bottom:0; left:0; right:0; height:22px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text3); z-index:9000; background:var(--glass); backdrop-filter:blur(20px); border-top:1px solid var(--glass-border); letter-spacing:0.5px; font-family:var(--font); font-weight:500;">
-&copy; 2026 Roberto Bonavita · v0.19 INTEROP BRIDGE · <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Multi-Format Export/Import · ✓ Reference Detection</span>
+&copy; 2026 Roberto Bonavita · v0.20 P2P SHARE · <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Multi-Format Export/Import · ✓ Reference Detection · ✓ P2P Share</span>
 </div>
 
 
@@ -893,6 +1035,13 @@ rzN.x=nx;rzN.y=ny;rzN.width=nw;rzN.height=nh;}
 else if(isSB&&sbN){const sb=sbN._sb;if(sb){const rel=cy-sbOff-sb.y,mT=sb.h-sb.tH;sbN.scrollY=mT>0?(Math.max(0,Math.min(rel,mT))/mT)*sbN._ms:0;}}
 else if(isDrag){if(isSel){const mX=Math.min(sStart.x,cx),mY=Math.min(sStart.y,cy);sRect={x:mX,y:mY,w:Math.abs(cx-sStart.x),h:Math.abs(cy-sStart.y)};}
 else if(isND&&dNode){const ndx=(cx-dOX)-dNode.x,ndy=(cy-dOY)-dNode.y;selN.forEach(n=>{if(!n.locked){n.x=snV(n.x+ndx);n.y=snV(n.y+ndy);}});}
+// P2P Share: Drag-Daten für Share Dock vorbereiten
+if (isND && dNode && selN.length > 0) {
+  draggedNodesForShare = {
+    nodes: selN.map(n => ({...cN(n)})),
+    connections: conns.filter(c => selN.some(sn => sn.id === c.from || sn.id === c.to)).map(c => ({...c}))
+  };
+}
 else if(isPan){vx+=dx;vy+=dy;}}}
 
 document.addEventListener('mouseup',e=>{if(window.PointerEvent)return;
@@ -903,7 +1052,17 @@ if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=b
 isConn=false;cStart=null;cStartPt=null;setCursor('default');}
 if(isSel){if(sRect&&(sRect.w>4||sRect.h>4)){const sel=nInR(sRect.x,sRect.y,sRect.w,sRect.h);if(e.ctrlKey||e.metaKey||e.shiftKey)sel.forEach(n=>addS(n));else{clrS();sel.forEach(n=>addS(n));}}isSel=false;sRect=null;}
 if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();}
+// P2P Share: Drag-Daten nach erfolgreichem Drag zurücksetzen
 isDrag=false;isND=false;isPan=false;dNode=null;moved=false;sR();});
+
+// P2P Share: HTML5 Drag & Drop für Node-Export
+canvas.addEventListener('dragstart', e => {
+  if (selN.length > 0 && draggedNodesForShare) {
+    e.dataTransfer.setData('application/board-nodes', JSON.stringify(draggedNodesForShare));
+    e.dataTransfer.effectAllowed = 'copy';
+    toast(`📦 ${selN.length} Node(s) zum Teilen bereit`);
+  }
+});
 
 // FIX 6: Improved wheel throttle (16ms = 60fps)
 let lastWheelTS=0;
@@ -2195,14 +2354,312 @@ document.getElementById('btn-generate-api').onclick = () => {
 };
 
 // Close on Escape
+<!-- P2P Share Dock UI -->
+<div id="share-dock">
+  <div class="share-dock-main">
+    <div class="share-dock-header">
+      <div class="share-dock-title">
+        <span style="font-size:16px;">📤</span>
+        <span>P2P Share</span>
+      </div>
+      <button class="share-dock-close" id="share-dock-close" aria-label="Schließen">✕</button>
+    </div>
+    <div class="share-dock-content">
+      <div class="share-drop-zone" id="share-drop-zone" tabindex="0" role="button" aria-label="Drop-Zone für Nodes">
+        <div class="share-drop-icon">📦</div>
+        <div class="share-drop-text">Nodes hier ablegen</div>
+        <div class="share-drop-hint">oder Strg+V zum Einfügen</div>
+      </div>
+      <div class="share-actions">
+        <button class="share-action-btn primary" id="share-generate-link">
+          <span>🔗</span>
+          <span>Link erstellen</span>
+        </button>
+        <button class="share-action-btn" id="share-copy-code">
+          <span>📋</span>
+          <span>Code kopieren</span>
+        </button>
+      </div>
+      <div class="share-status" id="share-status" style="display:none;"></div>
+      <div class="share-code-display" id="share-code-display" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && $interopPicker.style.display === 'flex') {
     $interopPicker.style.display = 'none';
   }
+  if (e.key === 'Escape' && document.getElementById('share-dock').classList.contains('open')) {
+    closeShareDock();
+  }
 });
 
-// ===== END INTEROPERABILITY BRIDGE =====
+// ===== P2P SHARE MODULE v0.20 =====
+// Lokaler Datenaustausch per Drag & Drop, Clipboard oder WebRTC
 
+const P2PShare = {
+  currentData: null,
+  shareId: null,
+  
+  // Generiert eine eindeutige Share-ID
+  generateShareId() {
+    return 'share-' + Math.random().toString(36).substr(2, 9);
+  },
+  
+  // Öffnet das Share Dock
+  open() {
+    const dock = document.getElementById('share-dock');
+    dock.classList.add('open');
+    this.updateStatus('Bereit zum Teilen', false);
+  },
+  
+  // Schließt das Share Dock
+  close() {
+    const dock = document.getElementById('share-dock');
+    dock.classList.remove('open');
+    this.currentData = null;
+    this.shareId = null;
+    document.getElementById('share-code-display').style.display = 'none';
+    document.getElementById('share-status').style.display = 'none';
+  },
+  
+  // Aktualisiert den Status-Text
+  updateStatus(message, isError = false) {
+    const statusEl = document.getElementById('share-status');
+    statusEl.textContent = message;
+    statusEl.style.background = isError ? 'rgba(255,69,58,0.15)' : 'var(--accent-soft)';
+    statusEl.style.color = isError ? 'var(--red)' : 'var(--text2)';
+    statusEl.style.display = 'block';
+  },
+  
+  // Verarbeitet gedraggte Nodes
+  handleDrop(data) {
+    if (!data || !data.nodes) {
+      this.updateStatus('❌ Ungültige Daten', true);
+      return;
+    }
+    
+    this.currentData = data;
+    this.shareId = this.generateShareId();
+    
+    const code = JSON.stringify({
+      type: 'board-share',
+      id: this.shareId,
+      timestamp: Date.now(),
+      data: data
+    });
+    
+    document.getElementById('share-code-display').textContent = code;
+    document.getElementById('share-code-display').style.display = 'block';
+    this.updateStatus(`✅ ${data.nodes.length} Node(s) bereit zum Teilen`);
+    
+    toast(`📦 ${data.nodes.length} Node(s) im Share Dock`);
+  },
+  
+  // Erstellt einen Share-Link (simuliert - in Zukunft mit WebRTC)
+  generateLink() {
+    if (!this.currentData) {
+      this.updateStatus('❌ Zuerst Nodes ablegen', true);
+      return;
+    }
+    
+    const code = document.getElementById('share-code-display').textContent;
+    const encoded = btoa(encodeURIComponent(code));
+    const shareUrl = `${window.location.origin}${window.location.pathname}?share=${encoded}`;
+    
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      this.updateStatus('🔗 Link in Zwischenablage kopiert!');
+      toast('📋 Share-Link kopiert!');
+    }).catch(err => {
+      this.updateStatus('❌ Link-Erstellung fehlgeschlagen', true);
+    });
+  },
+  
+  // Kopiert den Share-Code
+  copyCode() {
+    if (!this.currentData) {
+      this.updateStatus('❌ Zuerst Nodes ablegen', true);
+      return;
+    }
+    
+    const code = document.getElementById('share-code-display').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      this.updateStatus('📋 Code kopiert!');
+      toast('📋 Share-Code kopiert!');
+    }).catch(err => {
+      this.updateStatus('❌ Kopieren fehlgeschlagen', true);
+    });
+  },
+  
+  // Importiert geteilte Daten
+  importSharedData(encodedData) {
+    try {
+      const decoded = decodeURIComponent(atob(encodedData));
+      const parsed = JSON.parse(decoded);
+      
+      if (parsed.type !== 'board-share' || !parsed.data) {
+        throw new Error('Ungültiges Share-Format');
+      }
+      
+      const sharedData = parsed.data;
+      
+      // Nodes im sichtbaren Bereich platzieren
+      const viewportCenter = {
+        x: (-panX + canvas.width / 2) / zoom,
+        y: (-panY + canvas.height / 2) / zoom
+      };
+      
+      // Offset berechnen, um Nodes gruppiert zu platzieren
+      let minX = Infinity, minY = Infinity;
+      sharedData.nodes.forEach(n => {
+        if (n.x < minX) minX = n.x;
+        if (n.y < minY) minY = n.y;
+      });
+      
+      const offsetX = viewportCenter.x - minX;
+      const offsetY = viewportCenter.y - minY;
+      
+      // Nodes hinzufügen
+      sharedData.nodes.forEach(n => {
+        n.x += offsetX;
+        n.y += offsetY;
+        n.id = Date.now() + Math.random().toString(36).substr(2, 9);
+        nodes.push(n);
+      });
+      
+      // Connections hinzufügen (IDs anpassen)
+      if (sharedData.connections) {
+        sharedData.connections.forEach(c => {
+          conns.push({
+            from: c.from,
+            to: c.to,
+            label: c.label || ''
+          });
+        });
+      }
+      
+      saveState();
+      render();
+      renderMinimap();
+      updateCounts();
+      
+      toast(`✅ ${sharedData.nodes.length} Node(s) importiert!`);
+      return true;
+    } catch (error) {
+      console.error('Share Import Error:', error);
+      toast('❌ Import fehlgeschlagen: ' + error.message);
+      return false;
+    }
+  }
+};
+
+// Share Dock Event Listener
+document.getElementById('btn-share').onclick = () => {
+  P2PShare.open();
+};
+
+document.getElementById('share-dock-close').onclick = () => {
+  P2PShare.close();
+};
+
+document.getElementById('share-generate-link').onclick = () => {
+  P2PShare.generateLink();
+};
+
+document.getElementById('share-copy-code').onclick = () => {
+  P2PShare.copyCode();
+};
+
+// Drag & Drop Handler für Share Zone
+const dropZone = document.getElementById('share-drop-zone');
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('drag-over');
+});
+
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  
+  // Prüfen ob es sich um Board-Daten handelt
+  try {
+    const data = e.dataTransfer.getData('application/board-nodes');
+    if (data) {
+      const nodesData = JSON.parse(data);
+      P2PShare.handleDrop(nodesData);
+      return;
+    }
+  } catch (err) {
+    // Kein Board-Daten Format
+  }
+  
+  // Fallback: Text/JSON aus Clipboard versuchen
+  const textData = e.dataTransfer.getData('text/plain');
+  if (textData) {
+    try {
+      const parsed = JSON.parse(textData);
+      if (parsed.nodes) {
+        P2PShare.handleDrop(parsed);
+      } else {
+        P2PShare.updateStatus('❌ Keine Node-Daten erkannt', true);
+      }
+    } catch (err) {
+      P2PShare.updateStatus('❌ Ungültiges Format', true);
+    }
+  }
+});
+
+// Keyboard Shortcut für Paste (Strg+V) im Drop Zone
+dropZone.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+    e.preventDefault();
+    navigator.clipboard.readText().then(text => {
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.nodes || parsed.type === 'board-share') {
+          const data = parsed.type === 'board-share' ? parsed.data : parsed;
+          P2PShare.handleDrop(data);
+        } else {
+          P2PShare.updateStatus('❌ Keine Node-Daten erkannt', true);
+        }
+      } catch (err) {
+        P2PShare.updateStatus('❌ Ungültiges Format im Clipboard', true);
+      }
+    }).catch(err => {
+      P2PShare.updateStatus('❌ Clipboard-Zugriff verweigert', true);
+    });
+  }
+});
+
+// Check for share parameter on page load
+window.addEventListener('load', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const shareParam = urlParams.get('share');
+  
+  if (shareParam) {
+    setTimeout(() => {
+      const imported = P2PShare.importSharedData(shareParam);
+      if (imported) {
+        // Remove share param from URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        toast('✅ Geteilte Nodes importiert!');
+      }
+    }, 500);
+  }
+});
+
+// Integration mit Canvas Drag-Export
+// Wenn Nodes ausgewählt und gezogen werden, können sie ins Share Dock gedroppt werden
+let draggedNodesForShare = null;
+
+// ===== END P2P SHARE MODULE =====
 </script>
 </body>
 </html>
