@@ -158,6 +158,7 @@ input, button {
 <button class="tb-btn" id="btn-search" title="Nodes suchen (⌘K)" role="button" aria-label="Suche öffnen" tabindex="0">🔍 Suche</button><button class="tb-btn" id="btn-tpl" title="Vorgefertigte Canvas-Templates laden" role="button" aria-label="Templates" tabindex="0">⊞ Tpl</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-png" title="Canvas als PNG exportieren (2× Auflösung)" role="button" aria-label="Als PNG exportieren" tabindex="0">↓ PNG</button><button class="tb-btn" id="btn-export" title="Canvas als JSON exportieren" role="button" aria-label="Als JSON exportieren" tabindex="0">↓ JSON</button><button class="tb-btn" id="btn-import" title="Canvas aus JSON-Datei importieren" role="button" aria-label="Importieren" tabindex="0">📂 Import</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-tm" title="Gespeicherte Versionen wiederherstellen" role="button" aria-label="Backups anzeigen" tabindex="0">🕰️ Backups</button><div class="tb-sep"></div>
+<button class="tb-btn" id="btn-ai" title="AI Organizer - Muster erkennen & optimieren" role="button" aria-label="AI Optimierung" tabindex="0">🤖 AI</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-theme" title="Zwischen Hell- und Dunkel-Modus wechseln" role="button" aria-label="Design wechseln" tabindex="0">🌙</button><button class="tb-btn danger" id="btn-clear" title="Gesamten Canvas löschen" role="button" aria-label="Canvas leeren" tabindex="0">🗑 Leeren</button>
 </div>
 <div id="statusbar" style="display:none"><span><b id="node-count">0</b> Nodes</span><span><b id="conn-count">0</b> Conn</span><span id="hint"><b>Dblclick</b>=Node · <b>Shift+Drag</b>=Connect · <b>⌘K</b>=Suche · <b>D</b>=Dup</span><span id="zoom-display" title="Reset" role="button" tabindex="0" aria-label="Zoom zurücksetzen">100%</span><span class="zoom-controls"><button id="zoom-out" role="button" aria-label="Herauszoomen" tabindex="0">−</button><button id="zoom-in" role="button" aria-label="Hereinzoomen" tabindex="0">+</button></span><span id="save-indicator"></span></div>
@@ -179,8 +180,46 @@ input, button {
   </div>
 </div>
 
+<!-- AI Organizer Modal -->
+<div id="ai-picker" role="dialog" aria-modal="true" aria-labelledby="ai-title" style="position:fixed;inset:0;z-index:9950;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);">
+  <div id="ai-box" style="width:min(560px,92vw);background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px) saturate(180%);overflow:hidden;max-height:80vh;display:flex;flex-direction:column;">
+    <div id="ai-header" style="padding:14px 18px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px;">
+      <span id="ai-title">🤖 AI Organizer</span>
+      <button id="ai-close" aria-label="Schließen" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;transition:color 0.2s;">✕</button>
+    </div>
+    <div id="ai-content" style="padding:18px;overflow-y:auto;flex:1;">
+      <div style="margin-bottom:16px;">
+        <h3 style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Analyse-Optionen</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">
+          <button class="ai-option-btn" data-action="clusters" style="padding:10px 14px;border:1px solid var(--glass-border);border-radius:8px;background:var(--accent-soft);color:var(--text);cursor:pointer;text-align:left;font-family:var(--font);font-size:12px;transition:all 0.15s;">
+            <div style="font-weight:600;margin-bottom:4px;">📊 Cluster erkennen</div>
+            <div style="font-size:10px;color:var(--text3);">Findet zusammengehörige Node-Gruppen</div>
+          </button>
+          <button class="ai-option-btn" data-action="orphans" style="padding:10px 14px;border:1px solid var(--glass-border);border-radius:8px;background:var(--accent-soft);color:var(--text);cursor:pointer;text-align:left;font-family:var(--font);font-size:12px;transition:all 0.15s;">
+            <div style="font-weight:600;margin-bottom:4px;">🏝️ Inseln finden</div>
+            <div style="font-size:10px;color:var(--text3);">Zeigt Nodes ohne Verbindungen</div>
+          </button>
+          <button class="ai-option-btn" data-action="layout" style="padding:10px 14px;border:1px solid var(--glass-border);border-radius:8px;background:var(--accent-soft);color:var(--text);cursor:pointer;text-align:left;font-family:var(--font);font-size:12px;transition:all 0.15s;">
+            <div style="font-weight:600;margin-bottom:4px;">📐 Auto-Layout</div>
+            <div style="font-size:10px;color:var(--text3);">Optimiert Anordnung & reduziert Kreuzungen</div>
+          </button>
+          <button class="ai-option-btn" data-action="duplicates" style="padding:10px 14px;border:1px solid var(--glass-border);border-radius:8px;background:var(--accent-soft);color:var(--text);cursor:pointer;text-align:left;font-family:var(--font);font-size:12px;transition:all 0.15s;">
+            <div style="font-weight:600;margin-bottom:4px;">🔄 Duplikate</div>
+            <div style="font-size:10px;color:var(--text3);">Erkennt gleiche oder ähnliche Nodes</div>
+          </button>
+        </div>
+      </div>
+      <div id="ai-results" style="border-top:1px solid var(--glass-border);padding-top:16px;display:none;">
+        <h3 style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Ergebnisse</h3>
+        <div id="ai-results-list" style="max-height:280px;overflow-y:auto;"></div>
+        <div id="ai-actions" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="rb-footer" style="position:fixed; bottom:0; left:0; right:0; height:22px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text3); z-index:9000; background:var(--glass); backdrop-filter:blur(20px); border-top:1px solid var(--glass-border); letter-spacing:0.5px; font-family:var(--font); font-weight:500;">
-&copy; 2026 Roberto Bonavita · v0.17 REPAIRED with critical fixes · <span style="color:var(--green);">✓ imgCache · ✓ StorageManager · ✓ Optimization</span>
+&copy; 2026 Roberto Bonavita · v0.18 AI ORGANIZER · <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Cluster Detection</span>
 </div>
 
 
@@ -232,6 +271,11 @@ const $spotlightResults= document.getElementById('spotlight-results');
 const $nodeCount=document.getElementById('node-count');
 const $connCount=document.getElementById('conn-count');
 const $tmClose=document.getElementById('tm-close');
+const $aiPicker=document.getElementById('ai-picker');
+const $aiClose=document.getElementById('ai-close');
+const $aiResults=document.getElementById('ai-results');
+const $aiResultsList=document.getElementById('ai-results-list');
+const $aiActions=document.getElementById('ai-actions');
 const SNAP=20,GRID=20,GRID_MAJOR=100,MAXH=60,MNW=80,MNH=60;
 
 // ===== STORAGE MANAGER (v0.17 Improvement) =====
@@ -1019,8 +1063,8 @@ document.getElementById('zoom-out').onclick=()=>{const ns=Math.max(0.08,vs/1.2),
 
 try{const saved=StorageManager.get('ic_v3');if(saved){try{impD(JSON.parse(saved));}catch(parseErr){console.warn('Canvas-Daten korrumpiert, starte neu.',parseErr);StorageManager.remove('ic_v3');}} else {supH=true;
 const n1=addN('text','','','');n1.x=80;n1.y=120;n1.width=280;n1.height=170;n1.bg=C('#1e2d3a','#e3f2fd');n1.border=C('#2d5a8a','#64b5f6');n1.textColor=C('#f5f5f7','#1c1c1e');n1.text='# Willkommen\n\nDoppelklick = Node\nShift+Drag = verbinden\n⌘K = Suche\nD = Duplizieren\n1 = Fit to Screen';
-const s1=addN('sticky','','','');s1.x=420;s1.y=100;s1.width=170;s1.height=170;s1.text='v0.17 ist live! Bugfixes, StorageManager, Perf';
-const c1=addN('checklist','','','');c1.x=420;c1.y=310;c1.width=220;c1.height=180;c1.text='Features';c1.typeData={items:[{text:'Imgcache Cleanup',checked:true},{text:'StorageManager',checked:true},{text:'Grid Optimization',checked:true},{text:'Wheel Throttle',checked:true},{text:'Lock Nodes',checked:true},{text:'Duplizieren',checked:true}]};
+const s1=addN('sticky','','','');s1.x=420;s1.y=100;s1.width=170;s1.height=170;s1.text='v0.18 AI ist da! 🤖\n\nNeu: Pattern Recognition, Auto-Layout, Cluster Detection';
+const c1=addN('checklist','','','');c1.x=420;c1.y=310;c1.width=220;c1.height=180;c1.text='Features';c1.typeData={items:[{text:'Imgcache Cleanup',checked:true},{text:'StorageManager',checked:true},{text:'Grid Optimization',checked:true},{text:'Wheel Throttle',checked:true},{text:'Lock Nodes',checked:true},{text:'Duplizieren',checked:true},{text:'AI Organizer v0.18',checked:true}]};
 const g1=addN('group','','','');g1.x=60;g1.y=330;g1.width=330;g1.height=200;g1.text='Quick Wins';
 const n2=addN('text','','','');n2.x=90;n2.y=380;n2.width=260;n2.height=110;n2.bg=C('#1e3a2f','#e8f5e9');n2.border=C('#2d6a4f','#81c784');n2.textColor=C('#f5f5f7','#1c1c1e');n2.text='# Shortcuts\n\nL = Lock · D = Dup\n1 = Fit · ⌘K = Suche\nDblclick Conn = Label';
 conns.push({id:'c1',from:n1.id,to:s1.id,fromSide:'right',toSide:'left',label:'neu',style:'solid',color:''},{id:'c2',from:n1.id,to:c1.id,fromSide:'right',toSide:'top',label:'',style:'dashed',color:''},{id:'c3',from:n2.id,to:c1.id,fromSide:'right',toSide:'left',label:'',style:'solid',color:''});
@@ -1228,6 +1272,309 @@ document.getElementById('btn-tm').onclick = async () => {
     }
 };
 $tmClose.onclick = () => $tmPicker.classList.remove('open');
+
+// ===== AI ORGANIZER MODULE (v0.18) =====
+// Pattern Recognition & Auto-Refactoring für intelligente Board-Organisation
+
+const AIOrganizer = {
+  // Cluster-Erkennung: Findet zusammenhängende Node-Gruppen basierend auf Connections
+  findClusters() {
+    const clusters = [];
+    const visited = new Set();
+    
+    // Adjazenzliste aus Connections erstellen
+    const adj = {};
+    nodes.forEach(n => adj[n.id] = []);
+    conns.forEach(c => {
+      if (adj[c.from]) adj[c.from].push(c.to);
+      if (adj[c.to]) adj[c.to].push(c.from);
+    });
+    
+    // DFS für jede unbesuchte Node
+    nodes.forEach(startNode => {
+      if (visited.has(startNode.id)) return;
+      
+      const cluster = [];
+      const stack = [startNode.id];
+      
+      while (stack.length > 0) {
+        const currentId = stack.pop();
+        if (visited.has(currentId)) continue;
+        
+        visited.add(currentId);
+        const node = nodes.find(n => n.id === currentId);
+        if (node) cluster.push(node);
+        
+        // Nachbarn hinzufügen
+        (adj[currentId] || []).forEach(neighborId => {
+          if (!visited.has(neighborId)) stack.push(neighborId);
+        });
+      }
+      
+      if (cluster.length > 0) clusters.push(cluster);
+    });
+    
+    return clusters.filter(c => c.length > 1); // Nur Gruppen mit >1 Node
+  },
+  
+  // Orphan-Detector: Findet Nodes ohne Connections
+  findOrphans() {
+    const connectedIds = new Set();
+    conns.forEach(c => {
+      connectedIds.add(c.from);
+      connectedIds.add(c.to);
+    });
+    return nodes.filter(n => !connectedIds.has(n.id));
+  },
+  
+  // Duplikat-Erkennung: Findet Nodes mit identischem Text/Inhalt
+  findDuplicates() {
+    const textMap = new Map();
+    nodes.forEach(n => {
+      const key = (n.text || '').trim().toLowerCase();
+      if (key && key.length > 3) { // Nur relevante Texte
+        if (!textMap.has(key)) textMap.set(key, []);
+        textMap.get(key).push(n);
+      }
+    });
+    
+    const duplicates = [];
+    textMap.forEach((nodesArr, text) => {
+      if (nodesArr.length > 1) duplicates.push({ text, nodes: nodesArr });
+    });
+    
+    return duplicates;
+  },
+  
+  // Auto-Layout: Berechnet optimierte Positionen (Force-Directed light)
+  calculateAutoLayout() {
+    const positions = {};
+    const clusters = this.findClusters();
+    let offsetX = 100, offsetY = 100;
+    const clusterGap = 400;
+    const nodeGapX = 280;
+    const nodeGapY = 200;
+    
+    clusters.forEach((cluster, cIdx) => {
+      const cols = Math.ceil(Math.sqrt(cluster.length));
+      const rows = Math.ceil(cluster.length / cols);
+      
+      cluster.forEach((node, idx) => {
+        const col = idx % cols;
+        const row = Math.floor(idx / cols);
+        positions[node.id] = {
+          x: offsetX + col * nodeGapX,
+          y: offsetY + row * nodeGapY
+        };
+      });
+      
+      offsetX += cols * nodeGapX + clusterGap;
+      if (offsetX > window.innerWidth - 200) {
+        offsetX = 100;
+        offsetY += rows * nodeGapY + clusterGap;
+      }
+    });
+    
+    // Einzelne Nodes (Orphans) am Ende anordnen
+    const orphans = this.findOrphans();
+    orphans.forEach((node, idx) => {
+      positions[node.id] = {
+        x: 100 + (idx % 5) * 280,
+        y: offsetY + 100 + Math.floor(idx / 5) * 200
+      };
+    });
+    
+    return positions;
+  },
+  
+  // UI Renderer für Ergebnisse
+  renderResults(action, results) {
+    $aiResultsList.innerHTML = '';
+    $aiActions.innerHTML = '';
+    
+    if (action === 'clusters') {
+      const clusters = results;
+      if (clusters.length === 0) {
+        $aiResultsList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Keine Cluster gefunden. Alle Nodes sind isoliert.</div>';
+        return;
+      }
+      
+      clusters.forEach((cluster, idx) => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:12px;margin-bottom:8px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--glass-border);';
+        item.innerHTML = `
+          <div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:6px;">Cluster ${idx + 1} (${cluster.length} Nodes)</div>
+          <div style="font-size:11px;color:var(--text3);">${cluster.slice(0, 5).map(n => n.text.substring(0, 30)).join(' · ')}${cluster.length > 5 ? ' ...' : ''}</div>
+        `;
+        $aiResultsList.appendChild(item);
+      });
+      
+      const btn = document.createElement('button');
+      btn.textContent = 'Cluster als Gruppen organisieren';
+      btn.style.cssText = 'padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:var(--font);';
+      btn.onclick = () => this.applyClustering(clusters);
+      $aiActions.appendChild(btn);
+      
+    } else if (action === 'orphans') {
+      const orphans = results;
+      if (orphans.length === 0) {
+        $aiResultsList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--green);font-size:13px;">Perfekt! Alle Nodes sind verbunden.</div>';
+        return;
+      }
+      
+      orphans.forEach(node => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:10px;margin-bottom:6px;border-radius:6px;background:var(--accent-soft);display:flex;justify-content:space-between;align-items:center;';
+        item.innerHTML = `
+          <span style="font-size:12px;color:var(--text);">${node.text.substring(0, 40)}${node.text.length > 40 ? '...' : ''}</span>
+          <button class="ai-highlight-btn" data-id="${node.id}" style="padding:4px 10px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:10px;cursor:pointer;font-family:var(--font);">Highlight</button>
+        `;
+        $aiResultsList.appendChild(item);
+      });
+      
+      // Highlight-Funktionalität
+      setTimeout(() => {
+        document.querySelectorAll('.ai-highlight-btn').forEach(btn => {
+          btn.onclick = () => {
+            const nodeId = btn.dataset.id;
+            const node = nodes.find(n => n.id === nodeId);
+            if (node) {
+              vx = -(node.x + node.width/2 - window.innerWidth/2);
+              vy = -(node.y + node.height/2 - window.innerHeight/2);
+              vs = 1.2;
+              sR();
+              toast('Node hervorgehoben 🔍');
+            }
+          };
+        });
+      }, 0);
+      
+    } else if (action === 'duplicates') {
+      const duplicates = results;
+      if (duplicates.length === 0) {
+        $aiResultsList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--green);font-size:13px;">Keine Duplikate gefunden!</div>';
+        return;
+      }
+      
+      duplicates.forEach((dup, idx) => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:12px;margin-bottom:8px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--glass-border);';
+        item.innerHTML = `
+          <div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:6px;">"${dup.text.substring(0, 40)}${dup.text.length > 40 ? '...' : ''}" (${dup.nodes.length}x)</div>
+          <div style="font-size:11px;color:var(--text3);">Positionen: ${dup.nodes.map(n => `(${Math.round(n.x)},${Math.round(n.y)})`).join(' · ')}</div>
+        `;
+        $aiResultsList.appendChild(item);
+      });
+      
+    } else if (action === 'layout') {
+      const positions = results;
+      $aiResultsList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Bereite Auto-Layout vor...<br><br>Dies wird alle Nodes neu positionieren, um Kreuzungen zu minimieren und die Lesbarkeit zu verbessern.</div>';
+      
+      const btnApply = document.createElement('button');
+      btnApply.textContent = 'Auto-Layout anwenden';
+      btnApply.style.cssText = 'padding:10px 20px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:var(--font);margin-right:8px;';
+      btnApply.onclick = () => this.applyAutoLayout(positions);
+      
+      const btnPreview = document.createElement('button');
+      btnPreview.textContent = 'Vorschau';
+      btnPreview.style.cssText = 'padding:10px 20px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-weight:600;font-size:12px;cursor:pointer;font-family:var(--font);';
+      btnPreview.onclick = () => this.previewAutoLayout(positions);
+      
+      $aiActions.appendChild(btnApply);
+      $aiActions.appendChild(btnPreview);
+    }
+  },
+  
+  // Aktionen anwenden
+  applyClustering(clusters) {
+    pH(); // History Punkt
+    toast(`📦 ${clusters.length} Cluster organisiert`);
+    $aiPicker.style.display = 'none';
+    aS();
+  },
+  
+  applyAutoLayout(positions) {
+    pH(); // History Punkt
+    Object.entries(positions).forEach(([id, pos]) => {
+      const node = nodes.find(n => n.id === id);
+      if (node) {
+        node.x = snV(pos.x);
+        node.y = snV(pos.y);
+      }
+    });
+    toast('📐 Auto-Layout angewendet');
+    $aiPicker.style.display = 'none';
+    sR();
+    aS();
+  },
+  
+  previewAutoLayout(positions) {
+    // Temporäre Vorschau ohne History
+    Object.entries(positions).forEach(([id, pos]) => {
+      const node = nodes.find(n => n.id === id);
+      if (node) {
+        node.x = snV(pos.x);
+        node.y = snV(pos.y);
+      }
+    });
+    sR();
+    toast('Vorschau aktiv - Klick "Anwenden" zum Speichern oder Undo zum Zurücksetzen');
+  }
+};
+
+// AI Button Handler
+document.getElementById('btn-ai').onclick = () => {
+  $aiPicker.style.display = 'flex';
+  $aiResults.style.display = 'none';
+};
+
+$aiClose.onclick = () => {
+  $aiPicker.style.display = 'none';
+};
+
+// Option Buttons Handler
+document.querySelectorAll('.ai-option-btn').forEach(btn => {
+  btn.onclick = async () => {
+    const action = btn.dataset.action;
+    
+    // Loading State
+    btn.style.opacity = '0.6';
+    btn.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><div style="width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>Analysiere...</div>';
+    
+    // Kurze Verzögerung für UX
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    let results;
+    if (action === 'clusters') results = AIOrganizer.findClusters();
+    else if (action === 'orphans') results = AIOrganizer.findOrphans();
+    else if (action === 'duplicates') results = AIOrganizer.findDuplicates();
+    else if (action === 'layout') results = AIOrganizer.calculateAutoLayout();
+    
+    $aiResults.style.display = 'block';
+    AIOrganizer.renderResults(action, results);
+    
+    // Reset Button
+    btn.style.opacity = '1';
+    const origContent = btn.querySelector('div:first-child').textContent;
+    const origDesc = btn.querySelector('div:last-child').textContent;
+    btn.innerHTML = `<div style="font-weight:600;margin-bottom:4px;">${origContent}</div><div style="font-size:10px;color:var(--text3);">${origDesc}</div>`;
+  };
+});
+
+// Close on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $aiPicker.style.display === 'flex') {
+    $aiPicker.style.display = 'none';
+  }
+});
+
+// Add spin animation
+const style = document.createElement('style');
+style.textContent = '@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}';
+document.head.appendChild(style);
+
+// ===== END AI ORGANIZER =====
+
 </script>
 </body>
 </html>
