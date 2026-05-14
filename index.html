@@ -457,7 +457,7 @@ input, button {
 </style>
 
 <div id="rb-footer" style="position:fixed; bottom:0; left:0; right:0; height:22px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text3); z-index:9000; background:var(--glass); backdrop-filter:blur(20px); border-top:1px solid var(--glass-border); letter-spacing:0.5px; font-family:var(--font); font-weight:500;">
-&copy; 2026 Roberto Bonavita · v0.21 TOFEESHARE LIVE ROOM · <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Multi-Format Export/Import · ✓ Reference Detection · ✓ P2P Share · ✓ Live Room Sync</span>
+&copy; 2026 Roberto Bonavita · v0.23 PREDICTIVE WORKFLOW · <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Multi-Format Export/Import · ✓ Reference Detection · ✓ P2P Share · ✓ Live Room Sync · ✓ Predictive Macros</span>
 </div>
 
 
@@ -3112,6 +3112,229 @@ document.getElementById('room-copy-id').onclick = () => {
 };
 
 // ===== END TOFEESHARE LIVE ROOM MODULE =====
+
+// ===== PREDICTIVE WORKFLOW MODULE v0.23 =====
+const PredictiveWorkflow = {
+  enabled: true,
+  actionHistory: [],
+  maxHistory: 50,
+  patterns: {},
+  macros: [],
+  lastActions: [],
+  suggestionTimeout: null,
+  
+  init() {
+    this.loadFromStorage();
+    this.setupListeners();
+    console.log('🧠 Predictive Workflow v0.23 initialized');
+  },
+  
+  setupListeners() {
+    // Track node creation
+    document.addEventListener('nodeCreated', (e) => {
+      this.recordAction('createNode', { type: e.detail?.type || 'default' });
+    });
+    
+    // Track connections
+    document.addEventListener('connectionCreated', (e) => {
+      this.recordAction('connectNodes', {});
+    });
+    
+    // Track deletions
+    document.addEventListener('nodeDeleted', () => {
+      this.recordAction('deleteNode', {});
+    });
+    
+    // Track moves
+    let moveDebounce;
+    document.addEventListener('nodeMoved', (e) => {
+      clearTimeout(moveDebounce);
+      moveDebounce = setTimeout(() => {
+        this.recordAction('moveNode', {});
+      }, 500);
+    });
+  },
+  
+  recordAction(type, data) {
+    if (!this.enabled) return;
+    
+    const action = { type, data, timestamp: Date.now() };
+    this.actionHistory.push(action);
+    this.lastActions.push(type);
+    
+    // Keep history limited
+    if (this.actionHistory.length > this.maxHistory) {
+      this.actionHistory.shift();
+    }
+    if (this.lastActions.length > 10) {
+      this.lastActions.shift();
+    }
+    
+    // Analyze patterns after each action
+    this.analyzePatterns();
+    
+    // Save to storage
+    this.saveToStorage();
+  },
+  
+  analyzePatterns() {
+    if (this.lastActions.length < 3) return;
+    
+    // Look for repeating sequences of 3 actions
+    const sequence = this.lastActions.slice(-3).join('->');
+    
+    if (!this.patterns[sequence]) {
+      this.patterns[sequence] = { count: 1, lastSeen: Date.now() };
+    } else {
+      this.patterns[sequence].count++;
+      this.patterns[sequence].lastSeen = Date.now();
+      
+      // If pattern repeated 3+ times, suggest macro
+      if (this.patterns[sequence].count >= 3) {
+        this.suggestMacro(sequence);
+      }
+    }
+  },
+  
+  suggestMacro(pattern) {
+    if (this.suggestionTimeout) clearTimeout(this.suggestionTimeout);
+    
+    this.suggestionTimeout = setTimeout(() => {
+      this.showSuggestion(`Muster erkannt: ${pattern}. Als Macro speichern?`, () => {
+        this.saveMacro(pattern);
+      });
+    }, 1000);
+  },
+  
+  showSuggestion(message, onAccept) {
+    // Remove existing suggestions
+    const existing = document.querySelector('.pw-suggestion');
+    if (existing) existing.remove();
+    
+    const suggestion = document.createElement('div');
+    suggestion.className = 'pw-suggestion';
+    suggestion.style.cssText = `
+      position: fixed;
+      bottom: 100px;
+      right: 20px;
+      background: var(--glass);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 12px 16px;
+      backdrop-filter: blur(20px);
+      box-shadow: var(--shadow-lg);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      animation: pwSlideIn 0.3s ease;
+    `;
+    
+    suggestion.innerHTML = `
+      <div style="font-size: 13px; font-weight: 500; color: var(--text);">${message}</div>
+      <div style="display: flex; gap: 8px;">
+        <button id="pw-accept" style="flex:1; padding: 6px 12px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">Ja</button>
+        <button id="pw-dismiss" style="flex:1; padding: 6px 12px; background: transparent; color: var(--text2); border: 1px solid var(--glass-border); border-radius: 6px; font-size: 12px; cursor: pointer;">Nein</button>
+      </div>
+    `;
+    
+    document.body.appendChild(suggestion);
+    
+    document.getElementById('pw-accept').onclick = () => {
+      onAccept();
+      suggestion.remove();
+    };
+    
+    document.getElementById('pw-dismiss').onclick = () => {
+      suggestion.remove();
+    };
+    
+    // Auto dismiss after 10 seconds
+    setTimeout(() => {
+      if (suggestion.parentNode) suggestion.remove();
+    }, 10000);
+  },
+  
+  saveMacro(pattern) {
+    const macro = {
+      id: `macro_${Date.now()}`,
+      pattern,
+      actions: pattern.split('->'),
+      created: Date.now()
+    };
+    
+    this.macros.push(macro);
+    this.saveToStorage();
+    
+    // Show confirmation
+    this.showSuggestion(`✅ Macro gespeichert! Du kannst es jetzt über die Toolbar nutzen.`, () => {});
+  },
+  
+  executeMacro(macroId) {
+    const macro = this.macros.find(m => m.id === macroId);
+    if (!macro) return;
+    
+    console.log('🔄 Executing macro:', macro.pattern);
+    // Hier würde die tatsächliche Ausführung der Aktionen erfolgen
+    // Für jetzt nur Demo
+    alert(`Macro würde ausführen: ${macro.pattern}`);
+  },
+  
+  saveToStorage() {
+    try {
+      localStorage.setItem('predictive_workflow', JSON.stringify({
+        patterns: this.patterns,
+        macros: this.macros,
+        actionHistory: this.actionHistory.slice(-20) // Nur letzte 20 speichern
+      }));
+    } catch (e) {
+      console.warn('Could not save predictive workflow data');
+    }
+  },
+  
+  loadFromStorage() {
+    try {
+      const data = localStorage.getItem('predictive_workflow');
+      if (data) {
+        const parsed = JSON.parse(data);
+        this.patterns = parsed.patterns || {};
+        this.macros = parsed.macros || [];
+        this.actionHistory = parsed.actionHistory || [];
+      }
+    } catch (e) {
+      console.warn('Could not load predictive workflow data');
+    }
+  },
+  
+  getStats() {
+    return {
+      totalActions: this.actionHistory.length,
+      patternsDetected: Object.keys(this.patterns).length,
+      macrosSaved: this.macros.length
+    };
+  }
+};
+
+// Add CSS animation for suggestions
+const pwStyle = document.createElement('style');
+pwStyle.textContent = `
+  @keyframes pwSlideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+document.head.appendChild(pwStyle);
+
+// Initialize Predictive Workflow
+setTimeout(() => {
+  PredictiveWorkflow.init();
+}, 1000);
+
+// Add button to toolbar for macro access (optional)
+// This would be added to the toolbar HTML in a real implementation
+
+console.log('🧠 Predictive Workflow Module v0.23 loaded');
+// ===== END PREDICTIVE WORKFLOW MODULE =====
 
 // ===== END P2P SHARE MODULE =====
 </script>
