@@ -21,7 +21,7 @@
 .tb-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tb-btn.danger{color:var(--red)}.tb-btn.danger:hover{background:rgba(255,69,58,0.1);border-color:rgba(255,69,58,0.3);color:var(--red)}
 .tb-sep{width:1px;height:18px;background:var(--glass-border);margin:0 3px;flex-shrink:0}
-#add-dropdown{position:absolute;top:calc(100% + 6px);left:0;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--r);padding:4px 0;min-width:180px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px) saturate(180%);display:none;z-index:9200}
+#add-dropdown{position:fixed;top:0;left:0;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--r);padding:4px 0;min-width:180px;box-shadow:var(--shadow-lg);backdrop-filter:blur(40px) saturate(180%);display:none;z-index:9200}
 #add-dropdown.open{display:block}.dd-item{padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .1s}.dd-item:hover{background:var(--accent-soft)}
 .dd-sub{font-size:10px;color:var(--text3);margin-top:1px}
 #statusbar{position:fixed;bottom: 22px;left:0;right:0;height:30px;background:var(--glass);border-top:1px solid var(--glass-border);display:flex;align-items:center;padding:0 14px;gap:16px;z-index:9100;font-size:11px;color:var(--text3);backdrop-filter:blur(20px) saturate(180%)}
@@ -152,7 +152,7 @@ input, button {
 <span style="font-weight:700;font-size:13px;color:var(--text2);letter-spacing:.3px;white-space:nowrap;">Infinite Canvas</span>
 </span>
 <div class="tb-sep"></div>
-<button class="tb-btn" id="btn-add" title="Node hinzufügen" role="button" aria-label="Node hinzufügen" tabindex="0">+ Node ▼<div id="add-dropdown" role="menu" aria-label="Node Typen"><div class="dd-item" data-type="image" role="menuitem" tabindex="-1"><b>🖼️</b><div><div>Bild</div><div class="dd-sub">Upload/Paste</div></div></div><div class="dd-item" data-type="text" role="menuitem" tabindex="-1"><b>T</b><div><div>Text-Node</div><div class="dd-sub">Markdown</div></div></div><div class="dd-item" data-type="sticky" role="menuitem" tabindex="-1"><b>S</b><div><div>Sticky Note</div><div class="dd-sub">Post-it</div></div></div><div class="dd-item" data-type="checklist" role="menuitem" tabindex="-1"><b>✓</b><div><div>Checkliste</div><div class="dd-sub">To-dos</div></div></div><div class="dd-item" data-type="group" role="menuitem" tabindex="-1"><b>■</b><div><div>Gruppe</div><div class="dd-sub">Container</div></div></div><div class="dd-item" data-type="table" role="menuitem" tabindex="-1"><b>⊞</b><div><div>Tabelle</div><div class="dd-sub">Zeilen & Spalten</div></div></div><div class="dd-item" data-type="link" role="menuitem" tabindex="-1"><b>🔗</b><div><div>Link-Bubble</div><div class="dd-sub">URL / Weblink</div></div></div><div class="dd-item" data-type="diamond" role="menuitem" tabindex="-1"><b>◇</b><div><div>Raute</div><div class="dd-sub">Entscheidung</div></div></div><div class="dd-item" data-type="ellipse" role="menuitem" tabindex="-1"><b>⬭</b><div><div>Ellipse</div><div class="dd-sub">Prozess</div></div></div><div class="dd-item" data-type="hexagon" role="menuitem" tabindex="-1"><b>⬡</b><div><div>Hexagon</div><div class="dd-sub">Modul</div></div></div></div></button>
+<button class="tb-btn" id="btn-add" title="Node hinzufügen (Typ wählen)" role="button" aria-haspopup="true" aria-expanded="false" aria-controls="add-dropdown" tabindex="0">+ Node ▼</button>
 <button class="tb-btn" id="btn-undo" title="Rückgängig (Strg+Z)" role="button" aria-label="Rückgängig machen" tabindex="0">↶ Undo</button><button class="tb-btn" id="btn-redo" title="Wiederholen (Strg+Y)" role="button" aria-label="Wiederherstellen" tabindex="0">↷ Redo</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-snap" title="Am Raster einrasten – hält Nodes auf dem Grid" role="button" aria-label="Snap aktivieren" tabindex="0">⊡ Snap</button><button class="tb-btn" id="btn-fit" title="Alles anzeigen (Taste 1)" role="button" aria-label="An Bildschirm anpassen" tabindex="0">⊟ Fit</button><div class="tb-sep"></div>
 <button class="tb-btn" id="btn-search" title="Nodes suchen (⌘K)" role="button" aria-label="Suche öffnen" tabindex="0">🔍 Suche</button><button class="tb-btn" id="btn-tpl" title="Vorgefertigte Canvas-Templates laden" role="button" aria-label="Templates" tabindex="0">⊞ Tpl</button><div class="tb-sep"></div>
@@ -978,8 +978,17 @@ function cvPos(sx,sy){const r=canvas.getBoundingClientRect();return s2c(sx-r.lef
 function closeCM(){$ctxMenu.style.display='none';}
 document.addEventListener('mousedown',e=>{if(!$ctxMenu.contains(e.target))closeCM();if(!$addDropdown.contains(e.target)&&!document.getElementById('btn-add').contains(e.target))closeDD();});
 
-function closeDD(){$addDropdown.classList.remove('open');}
-document.getElementById('btn-add').addEventListener('click',e=>{e.stopPropagation();$addDropdown.classList.toggle('open');});
+function closeDD(){$addDropdown.classList.remove('open');document.getElementById('btn-add').setAttribute('aria-expanded','false');}
+document.getElementById('btn-add').addEventListener('click',e=>{
+  e.stopPropagation();
+  const isOpen=$addDropdown.classList.toggle('open');
+  document.getElementById('btn-add').setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  if(isOpen){
+    const r=document.getElementById('btn-add').getBoundingClientRect();
+    $addDropdown.style.top=(r.bottom+6)+'px';
+    $addDropdown.style.left=Math.min(r.left, window.innerWidth-190)+'px';
+  }
+});
 document.querySelectorAll('#add-dropdown .dd-item').forEach(item=>{item.addEventListener('click',e=>{e.stopPropagation();const t=item.dataset.type;const cx=(canvas.width/2-vx)/vs,cy=(canvas.height/2-vy)/vs;let x=cx-125,y=cy-60;if(t==='sticky'){x=cx-90;y=cy-90;}if(t==='checklist'){x=cx-120;y=cy-90;}if(t==='group'){x=cx-190;y=cy-140;}if(t==='table'){x=cx-150;y=cy-100;}if(t==='link'){x=cx-60;y=cy-60;}if(t==='diamond'){x=cx-90;y=cy-70;}if(t==='ellipse'){x=cx-100;y=cy-60;}if(t==='hexagon'){x=cx-90;y=cy-80;}addN(t,x,y);closeDD();toast(t+' ✓');});});
 document.getElementById('btn-undo').onclick=undo;document.getElementById('btn-redo').onclick=redo;
 document.getElementById('btn-snap').onclick=()=>{snap=!snap;document.getElementById('btn-snap').classList.toggle('active',snap);toast(snap?'Snap ⊞':'Snap aus');sR();};
@@ -1205,5 +1214,17 @@ document.getElementById('btn-tm').onclick = async () => {
 };
 $tmClose.onclick = () => $tmPicker.classList.remove('open');
 </script>
+<div id="add-dropdown" role="menu" aria-label="Node Typen">
+<div class="dd-item" data-type="image" role="menuitem" tabindex="-1"><b>🖼️</b><div><div>Bild</div><div class="dd-sub">Upload / Paste</div></div></div>
+<div class="dd-item" data-type="text" role="menuitem" tabindex="-1"><b>T</b><div><div>Text-Node</div><div class="dd-sub">Markdown</div></div></div>
+<div class="dd-item" data-type="sticky" role="menuitem" tabindex="-1"><b>S</b><div><div>Sticky Note</div><div class="dd-sub">Post-it</div></div></div>
+<div class="dd-item" data-type="checklist" role="menuitem" tabindex="-1"><b>✓</b><div><div>Checkliste</div><div class="dd-sub">To-dos</div></div></div>
+<div class="dd-item" data-type="group" role="menuitem" tabindex="-1"><b>■</b><div><div>Gruppe</div><div class="dd-sub">Container</div></div></div>
+<div class="dd-item" data-type="table" role="menuitem" tabindex="-1"><b>⊞</b><div><div>Tabelle</div><div class="dd-sub">Zeilen &amp; Spalten</div></div></div>
+<div class="dd-item" data-type="link" role="menuitem" tabindex="-1"><b>🔗</b><div><div>Link-Bubble</div><div class="dd-sub">URL / Weblink</div></div></div>
+<div class="dd-item" data-type="diamond" role="menuitem" tabindex="-1"><b>◇</b><div><div>Raute</div><div class="dd-sub">Entscheidung</div></div></div>
+<div class="dd-item" data-type="ellipse" role="menuitem" tabindex="-1"><b>⬭</b><div><div>Ellipse</div><div class="dd-sub">Prozess</div></div></div>
+<div class="dd-item" data-type="hexagon" role="menuitem" tabindex="-1"><b>⬡</b><div><div>Hexagon</div><div class="dd-sub">Modul</div></div></div>
+</div>
 </body>
 </html>
