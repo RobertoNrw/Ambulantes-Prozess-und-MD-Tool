@@ -507,73 +507,97 @@ if(c.label){const mx=(fp.x+tp.x)/2,my=(fp.y+tp.y)/2;ctx.font=`500 11px ${FB}`;co
 
 // FIX 5: Optimized drawGrid with performance guards
 function drawGrid(){
-  const dpr = window.devicePixelRatio || 1;
-  const sx = -vx/vs, sy = -vy/vs, 
-        ex = sx + canvas.width/(vs*dpr), 
-        ey = sy + canvas.height/(vs*dpr);
+  // Grid wird jetzt relativ zum aktuellen Viewport-Kontext gezeichnet
+  // Der Kontext ist hier bereits durch render() transformiert (translate/scale)
+  // ABER: drawGrid wird in render() VOR dem translate/scale aufgerufen? 
+  // Nein, in Zeile 583: ctx.translate(vx,vy); ctx.scale(vs,vs); if(showGrid)drawGrid();
+  // Also sind wir bereits im transformierten Raum. 
   
-  // Performance guard: Skip minor grid when too much to draw
-  const gridArea = (ex - sx) * (ey - sy);
+  const dpr = window.devicePixelRatio || 1;
+  
+  // Berechnung des sichtbaren Bereichs im WELT-Koordinatensystem (vor Transformation)
+  // Da wir bereits transformiert sind, müssen wir rückwärts rechnen oder einfach die globalen Grenzen nutzen
+  // Einfacher: Wir nutzen die Canvas-Größe und rechnen zurück
+  
+  // Aktuelle Viewport-Grenzen in Weltkoordinaten
+  const worldLeft = -vx / vs;
+  const worldTop = -vy / vs;
+  const worldRight = worldLeft + (canvas.width / dpr) / vs;
+  const worldBottom = worldTop + (canvas.height / dpr) / vs;
+  
+  const gridArea = (worldRight - worldLeft) * (worldBottom - worldTop);
   const skipMinorGrid = gridArea > 1000000;
   
+  // Hilfsfunktion für scharfe Linien (Snap to Pixel im Viewport)
+  const snapToPixel = (val) => Math.round(val * vs * dpr) / (vs * dpr);
+
   if (!skipMinorGrid) {
     ctx.strokeStyle = C('rgba(255,255,255,0.05)','rgba(0,0,0,0.07)');
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 / vs; // Damit bleibt die Linie immer 1px dick auf dem Screen
     ctx.beginPath();
-    for(let x = Math.floor(sx/GRID)*GRID; x <= ex; x += GRID) {
+    
+    // Minor Grid Vertikal
+    for(let x = Math.floor(worldLeft/GRID)*GRID; x <= worldRight; x += GRID) {
       if(x % GRID_MAJOR === 0) continue;
-      ctx.moveTo(x, sy);
-      ctx.lineTo(x, ey);
+      const drawX = snapToPixel(x);
+      ctx.moveTo(drawX, worldTop);
+      ctx.lineTo(drawX, worldBottom);
     }
-    for(let y = Math.floor(sy/GRID)*GRID; y <= ey; y += GRID) {
+    // Minor Grid Horizontal
+    for(let y = Math.floor(worldTop/GRID)*GRID; y <= worldBottom; y += GRID) {
       if(y % GRID_MAJOR === 0) continue;
-      ctx.moveTo(sx, y);
-      ctx.lineTo(ex, y);
+      const drawY = snapToPixel(y);
+      ctx.moveTo(worldLeft, drawY);
+      ctx.lineTo(worldRight, drawY);
     }
     ctx.stroke();
   }
   
-  // Major grid (always)
+  // Major grid (immer zeichnen)
   ctx.strokeStyle = C('rgba(255,255,255,0.1)','rgba(0,0,0,0.12)');
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1.5 / vs; // Etwas dicker für bessere Sichtbarkeit
   ctx.beginPath();
-  for(let x = Math.floor(sx/GRID_MAJOR)*GRID_MAJOR; x <= ex; x += GRID_MAJOR) {
-    ctx.moveTo(x, sy);
-    ctx.lineTo(x, ey);
+  
+  for(let x = Math.floor(worldLeft/GRID_MAJOR)*GRID_MAJOR; x <= worldRight; x += GRID_MAJOR) {
+    const drawX = snapToPixel(x);
+    ctx.moveTo(drawX, worldTop);
+    ctx.lineTo(drawX, worldBottom);
   }
-  for(let y = Math.floor(sy/GRID_MAJOR)*GRID_MAJOR; y <= ey; y += GRID_MAJOR) {
-    ctx.moveTo(sx, y);
-    ctx.lineTo(ex, y);
+  for(let y = Math.floor(worldTop/GRID_MAJOR)*GRID_MAJOR; y <= worldBottom; y += GRID_MAJOR) {
+    const drawY = snapToPixel(y);
+    ctx.moveTo(worldLeft, drawY);
+    ctx.lineTo(worldRight, drawY);
   }
   ctx.stroke();
   
-  // Dots only at reasonable zoom and grid density
+  // Dots nur bei vernünftigem Zoom und nicht zu viel Fläche
   if(vs > 0.3 && gridArea < 500000) {
     ctx.fillStyle = C('rgba(255,255,255,0.15)','rgba(0,0,0,0.15)');
-    for(let x = Math.floor(sx/GRID_MAJOR)*GRID_MAJOR; x <= ex; x += GRID_MAJOR) {
-      for(let y = Math.floor(sy/GRID_MAJOR)*GRID_MAJOR; y <= ey; y += GRID_MAJOR) {
+    for(let x = Math.floor(worldLeft/GRID_MAJOR)*GRID_MAJOR; x <= worldRight; x += GRID_MAJOR) {
+      for(let y = Math.floor(worldTop/GRID_MAJOR)*GRID_MAJOR; y <= worldBottom; y += GRID_MAJOR) {
+        // Kein SnapToPixel für Dots, damit sie exakt auf der Koordinate bleiben
         ctx.beginPath();
-        ctx.arc(x, y, 2, 0, 2*Math.PI);
+        ctx.arc(x, y, 2 / vs, 0, 2*Math.PI); // Radius skalieren, damit er konstant wirkt
         ctx.fill();
       }
     }
   }
   
-  // Origin marker
-  if(sx <= 0 && ex >= 0 && sy <= 0 && ey >= 0) {
+  // Origin marker (nur wenn sichtbar)
+  if(worldLeft <= 0 && worldRight >= 0 && worldTop <= 0 && worldBottom >= 0) {
     ctx.fillStyle = C('rgba(0,122,255,0.25)','rgba(0,122,255,0.2)');
     ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, 2*Math.PI);
+    ctx.arc(0, 0, 4 / vs, 0, 2*Math.PI);
     ctx.fill();
   }
   
-  // Snap dots (only at decent zoom)
+  // Snap dots (nur bei gutem Zoom)
   if(snap && vs > 0.15) {
     ctx.fillStyle = C('rgba(0,122,255,0.2)','rgba(0,122,255,0.15)');
-    for(let x = Math.floor(sx/SNAP)*SNAP; x <= ex; x += SNAP) {
-      for(let y = Math.floor(sy/SNAP)*SNAP; y <= ey; y += SNAP) {
+    for(let x = Math.floor(worldLeft/SNAP)*SNAP; x <= worldRight; x += SNAP) {
+      for(let y = Math.floor(worldTop/SNAP)*SNAP; y <= worldBottom; y += SNAP) {
         ctx.beginPath();
-        ctx.arc(x, y, 1.2, 0, 2*Math.PI);
+        ctx.arc(x, y, 1.2 / vs, 0, 2*Math.PI);
         ctx.fill();
       }
     }
