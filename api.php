@@ -4,10 +4,9 @@
  * Verbesserte Fehlerbehandlung und Debugging
  */
 
-// === DEBUG MODE: Fehler direkt anzeigen zum Testen ===
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
 
 // === SICHERHEIT: CORS nur für erlaubte Domains ===
 $allowed_origins = [];
@@ -32,8 +31,7 @@ if (in_array($origin, $allowed_origins, true)) {
     header("Access-Control-Allow-Origin: {$origin}");
     header('Access-Control-Allow-Credentials: true');
 } else {
-    // Für Debugging: Wenn Origin leer ist oder localhost, trotzdem erlauben
-    if (empty($origin) || strpos($origin, 'localhost') !== false) {
+    if (empty($origin) || in_array($origin, ['http://localhost', 'http://127.0.0.1', 'http://localhost:8080'], true)) {
         header("Access-Control-Allow-Origin: {$origin}");
     } else {
         header('Access-Control-Allow-Origin: ');
@@ -130,7 +128,7 @@ try {
     echo json_encode([
         'error' => $e->getMessage(),
         'debug' => $debug_info,
-        'suggestion' => 'Stelle sicher dass der Webserver (www-data) Schreibrechte auf dem data/ Ordner hat. Führe aus: chmod -R 775 data/ && chown -R www-www-data data/'
+        'suggestion' => 'Stelle sicher dass der Webserver (www-data) Schreibrechte auf dem data/ Ordner hat. Führe aus: chmod -R 775 data/ && chown -R www-data:www-data data/'
     ]);
     exit;
 }
@@ -199,7 +197,7 @@ function validate_canvas_data(array $data): bool {
     if (!isset($data['nodes']) || !is_array($data['nodes'])) {
         return false;
     }
-    if (!isset($data['conns']) || !is_array($data['conns'])) {
+    if (!isset($data['edges']) || !is_array($data['edges'])) {
         return false;
     }
     
@@ -207,7 +205,7 @@ function validate_canvas_data(array $data): bool {
     if (count($data['nodes']) > 5000) {
         respond(['ok' => false, 'error' => 'Too many nodes (max 5000)'], 400);
     }
-    if (count($data['conns']) > 10000) {
+    if (count($data['edges']) > 10000) {
         respond(['ok' => false, 'error' => 'Too many connections (max 10000)'], 400);
     }
     
@@ -329,13 +327,13 @@ function body_json(): array {
 }
 
 function canvas_summary(array $doc, string $id, string $file): array {
-    $data = $doc['data'] ?? ['nodes' => [], 'conns' => []];
+    $data = $doc['data'] ?? ['nodes' => [], 'edges' => []];
     return [
         'id' => $id,
         'updatedAt' => $doc['updatedAt'] ?? null,
         'createdAt' => $doc['createdAt'] ?? null,
         'nodeCount' => is_array($data['nodes'] ?? null) ? count($data['nodes']) : 0,
-        'connCount' => is_array($data['conns'] ?? null) ? count($data['conns']) : 0,
+        'connCount' => is_array($data['edges'] ?? null) ? count($data['edges']) : 0,
         'bytes' => is_file($file) ? filesize($file) : 0,
     ];
 }
@@ -349,7 +347,7 @@ if ($action === 'health') {
     respond([
         'ok' => true, 
         'service' => 'canvas-api', 
-        'version' => '3.2-improved',
+        'version' => '4.1',
         'php' => PHP_VERSION, 
         'time' => date('c'), 
         'writeProtected' => REQUIRE_WRITE_KEY ? 'yes' : 'no (ENTWICKLUNG)',
@@ -380,7 +378,7 @@ if ($action === 'load') {
         'updatedAt' => $doc['updatedAt'] ?? null, 
         'createdAt' => $doc['createdAt'] ?? null, 
         'version' => $doc['version'] ?? 0,
-        'data' => $doc['data'] ?? ['nodes' => [], 'conns' => []]
+        'data' => $doc['data'] ?? ['nodes' => [], 'edges' => []]
     ]);
 }
 
@@ -399,7 +397,9 @@ if ($action === 'save') {
         respond(['ok' => false, 'error' => 'Missing field: data'], 400);
     }
     
-    validate_canvas_data($data);  // ← HINZUGEFÜGT
+    if (!validate_canvas_data($data)) {
+        respond(['ok' => false, 'error' => 'Invalid canvas data structure'], 400);
+    }
 
     $existing = is_file($file) ? read_json_file($file) : null;
     $now = date('c');
@@ -422,8 +422,8 @@ if ($action === 'save') {
         'id' => $id, 
         'updatedAt' => $doc['updatedAt'], 
         'version' => $doc['version'], 
-        'nodeCount' => count($data['nodes']), 
-        'connCount' => count($data['conns'])
+        'nodeCount' => count($data['nodes']),
+        'connCount' => count($data['edges'])
     ]);
 }
 
@@ -499,7 +499,7 @@ if ($action === 'restore') {
         'createdAt' => $revDoc['createdAt'] ?? $now, 
         'updatedAt' => $now, 
         'version' => (int)($existing['version'] ?? 0) + 1, 
-        'data' => $revDoc['data'] ?? ['nodes' => [], 'conns' => []]
+        'data' => $revDoc['data'] ?? ['nodes' => [], 'edges' => []]
     ];
 
     write_json_file($file, $doc);
