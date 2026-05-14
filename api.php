@@ -1,16 +1,30 @@
 <?php
 /**
- * Infinite Canvas API v4.0
- * Verbesserungen: Security, Rate Limiting, Collision Handling, Validation, CORS
+ * Infinite Canvas API v4.1
+ * Verbesserte Fehlerbehandlung und Debugging
  */
+
+// === DEBUG MODE: Fehler direkt anzeigen zum Testen ===
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 // === SICHERHEIT: CORS nur für erlaubte Domains ===
 $allowed_origins = [];
 if (getenv('ALLOWED_ORIGINS')) {
     $allowed_origins = array_map('trim', explode(',', getenv('ALLOWED_ORIGINS')));
 } else {
-    // Development fallback - in Production explizite Domains setzen!
-    $allowed_origins = ['http://localhost', 'http://127.0.0.1'];
+    // Fallback: .env Datei lesen falls getenv nicht funktioniert
+    $env_file = __DIR__ . '/.env';
+    if (file_exists($env_file)) {
+        $env_content = file_get_contents($env_file);
+        if (preg_match('/ALLOWED_ORIGINS=(.*)/', $env_content, $matches)) {
+            $allowed_origins = array_map('trim', explode(',', trim($matches[1])));
+        }
+    }
+    if (empty($allowed_origins)) {
+        $allowed_origins = ['https://board.bonavita.com.de', 'http://localhost', 'http://127.0.0.1', 'http://localhost:8080'];
+    }
 }
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
@@ -18,8 +32,12 @@ if (in_array($origin, $allowed_origins, true)) {
     header("Access-Control-Allow-Origin: {$origin}");
     header('Access-Control-Allow-Credentials: true');
 } else {
-    // Keine CORS Header für unbekannte Origins
-    header('Access-Control-Allow-Origin: ');
+    // Für Debugging: Wenn Origin leer ist oder localhost, trotzdem erlauben
+    if (empty($origin) || strpos($origin, 'localhost') !== false) {
+        header("Access-Control-Allow-Origin: {$origin}");
+    } else {
+        header('Access-Control-Allow-Origin: ');
+    }
 }
 
 header('Content-Type: application/json; charset=utf-8');
@@ -44,8 +62,21 @@ define('LOG_DIR', DATA_DIR . '/logs');
 define('MAX_BODY_BYTES', 5 * 1024 * 1024);
 define('MAX_REVISIONS_PER_CANVAS', 20);
 define('ENABLE_DELETE', true);
-define('REQUIRE_WRITE_KEY', getenv('API_KEY') ? true : false);  // Nur TRUE wenn .env var existiert
+define('REQUIRE_WRITE_KEY', getenv('API_KEY') ? true : false);
 define('WRITE_KEY', getenv('API_KEY') ?: 'dev-key-change-in-production');
+
+// Debug Info für Error Messages
+$debug_info = [
+    'php_version' => phpversion(),
+    'cwd' => getcwd(),
+    'script_path' => __FILE__,
+    'data_dir' => DATA_DIR,
+    'canvas_dir' => CANVAS_DIR,
+    'allowed_origins' => $allowed_origins,
+    'request_origin' => $origin,
+    'api_key_set' => !empty(getenv('API_KEY')),
+    'env_file_exists' => file_exists(__DIR__ . '/.env')
+];
 
 // === LOGGING: Zentrale Fehlerprotokollierung ===
 function log_error(string $message, array $context = []): void {
@@ -62,6 +93,46 @@ function log_error(string $message, array $context = []): void {
         $context ? ' | Context: ' . json_encode($context) : ''
     );
     @file_put_contents($log_file, $entry, FILE_APPEND | LOCK_EX);
+}
+
+// === VERZEICHNISSE ERSTELLEN UND PRÜFEN ===
+try {
+    if (!is_dir(DATA_DIR)) {
+        if (!@mkdir(DATA_DIR, 0755, true)) {
+            throw new Exception("Kann DATA_DIR nicht erstellen: " . DATA_DIR);
+        }
+    }
+    if (!is_dir(CANVAS_DIR)) {
+        if (!@mkdir(CANVAS_DIR, 0775, true)) {
+            throw new Exception("Kann CANVAS_DIR nicht erstellen: " . CANVAS_DIR);
+        }
+    }
+    if (!is_dir(REVISION_DIR)) {
+        if (!@mkdir(REVISION_DIR, 0775, true)) {
+            throw new Exception("Kann REVISION_DIR nicht erstellen: " . REVISION_DIR);
+        }
+    }
+    if (!is_dir(LOG_DIR)) {
+        if (!@mkdir(LOG_DIR, 0775, true)) {
+            throw new Exception("Kann LOG_DIR nicht erstellen: " . LOG_DIR);
+        }
+    }
+    
+    // Schreibrechte prüfen
+    if (!is_writable(CANVAS_DIR)) {
+        throw new Exception("Keine Schreibrechte für CANVAS_DIR: " . CANVAS_DIR . ". Bitte chmod 775 oder chown www-data ausführen.");
+    }
+    if (!is_writable(LOG_DIR)) {
+        error_log("Warning: LOG_DIR nicht beschreibbar: " . LOG_DIR);
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        'error' => $e->getMessage(),
+        'debug' => $debug_info,
+        'suggestion' => 'Stelle sicher dass der Webserver (www-data) Schreibrechte auf dem data/ Ordner hat. Führe aus: chmod -R 775 data/ && chown -R www-www-data data/'
+    ]);
+    exit;
 }
 
 // === VERBESSERUNGEN ===
