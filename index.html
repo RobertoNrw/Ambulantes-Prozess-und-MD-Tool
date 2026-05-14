@@ -2353,7 +2353,9 @@ document.getElementById('btn-generate-api').onclick = () => {
   toast('🔌 API Spec heruntergeladen');
 };
 
-// Close on Escape
+// ===== END INTEROP MODULE =====
+</script>
+
 <!-- P2P Share Dock UI -->
 <div id="share-dock">
   <div class="share-dock-main">
@@ -2387,12 +2389,13 @@ document.getElementById('btn-generate-api').onclick = () => {
 </div>
 
 <script>
+// Close on Escape
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && $interopPicker.style.display === 'flex') {
     $interopPicker.style.display = 'none';
   }
   if (e.key === 'Escape' && document.getElementById('share-dock').classList.contains('open')) {
-    closeShareDock();
+    P2PShare.close();
   }
 });
 
