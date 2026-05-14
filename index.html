@@ -8,6 +8,8 @@
 <title>Infinite Canvas v4.0 - Premium Design Tool</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- PeerJS for WebRTC P2P Connections -->
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
 :root{--bg:#1c1c1e;--surface:rgba(44,44,46,0.92);--glass:rgba(30,30,32,0.78);--glass-border:rgba(255,255,255,0.08);--text:#f5f5f7;--text2:rgba(255,255,255,0.55);--text3:rgba(255,255,255,0.3);--accent:#007AFF;--green:#30D158;--red:#FF453A;--accent-soft:rgba(0,122,255,0.15);--shadow:0 8px 32px rgba(0,0,0,0.45);--shadow-lg:0 24px 48px -12px rgba(0,0,0,0.5), 0 12px 24px -8px rgba(0,0,0,0.3);--r:12px;--rs:8px;--font:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;--node-bg:#2c2c2e;--node-border:#48484a;--node-text:#f5f5f7;--canvas-bg:#1c1c1e}
 :root.light{--bg:#f2f2f7;--surface:rgba(255,255,255,0.92);--glass:rgba(255,255,255,0.78);--glass-border:rgba(0,0,0,0.06);--text:#1c1c1e;--text2:rgba(0,0,0,0.5);--text3:rgba(0,0,0,0.25);--accent-soft:rgba(0,122,255,0.1);--shadow:0 8px 32px rgba(0,0,0,0.08);--shadow-lg:0 24px 48px -12px rgba(0,0,0,0.15), 0 12px 24px -8px rgba(0,0,0,0.1);--node-bg:#fff;--node-border:#d1d1d6;--node-text:#1c1c1e;--canvas-bg:#f2f2f7}
@@ -455,7 +457,7 @@ input, button {
 </style>
 
 <div id="rb-footer" style="position:fixed; bottom:0; left:0; right:0; height:22px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text3); z-index:9000; background:var(--glass); backdrop-filter:blur(20px); border-top:1px solid var(--glass-border); letter-spacing:0.5px; font-family:var(--font); font-weight:500;">
-&copy; 2026 Roberto Bonavita · v0.20 P2P SHARE · <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Multi-Format Export/Import · ✓ Reference Detection · ✓ P2P Share</span>
+&copy; 2026 Roberto Bonavita · v0.21 TOFEESHARE LIVE ROOM · <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Multi-Format Export/Import · ✓ Reference Detection · ✓ P2P Share · ✓ Live Room Sync</span>
 </div>
 
 
@@ -2367,23 +2369,68 @@ document.getElementById('btn-generate-api').onclick = () => {
       <button class="share-dock-close" id="share-dock-close" aria-label="Schließen">✕</button>
     </div>
     <div class="share-dock-content">
-      <div class="share-drop-zone" id="share-drop-zone" tabindex="0" role="button" aria-label="Drop-Zone für Nodes">
-        <div class="share-drop-icon">📦</div>
-        <div class="share-drop-text">Nodes hier ablegen</div>
-        <div class="share-drop-hint">oder Strg+V zum Einfügen</div>
+      <!-- Tab Navigation -->
+      <div style="display:flex;gap:4px;margin-bottom:12px;">
+        <button class="share-action-btn" id="tab-share" style="flex:1;padding:6px 10px;font-size:10px;">📦 Share</button>
+        <button class="share-action-btn" id="tab-room" style="flex:1;padding:6px 10px;font-size:10px;">📡 Live Room</button>
       </div>
-      <div class="share-actions">
-        <button class="share-action-btn primary" id="share-generate-link">
-          <span>🔗</span>
-          <span>Link erstellen</span>
-        </button>
-        <button class="share-action-btn" id="share-copy-code">
-          <span>📋</span>
-          <span>Code kopieren</span>
-        </button>
+      
+      <!-- Share Tab -->
+      <div id="share-tab-content">
+        <div class="share-drop-zone" id="share-drop-zone" tabindex="0" role="button" aria-label="Drop-Zone für Nodes">
+          <div class="share-drop-icon">📦</div>
+          <div class="share-drop-text">Nodes hier ablegen</div>
+          <div class="share-drop-hint">oder Strg+V zum Einfügen</div>
+        </div>
+        <div class="share-actions">
+          <button class="share-action-btn primary" id="share-generate-link">
+            <span>🔗</span>
+            <span>Link erstellen</span>
+          </button>
+          <button class="share-action-btn" id="share-copy-code">
+            <span>📋</span>
+            <span>Code kopieren</span>
+          </button>
+        </div>
+        <div class="share-status" id="share-status" style="display:none;"></div>
+        <div class="share-code-display" id="share-code-display" style="display:none;"></div>
       </div>
-      <div class="share-status" id="share-status" style="display:none;"></div>
-      <div class="share-code-display" id="share-code-display" style="display:none;"></div>
+      
+      <!-- Live Room Tab -->
+      <div id="room-tab-content" style="display:none;">
+        <div style="background:var(--node-bg);border-radius:12px;padding:14px;margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;">📡 TofeeShare Live Room</div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:12px;line-height:1.4;">Erstelle einen Raum oder tritt einem bei. Alle Änderungen werden in Echtzeit synchronisiert.</div>
+          
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <input type="text" id="room-id-input" placeholder="Raum-ID eingeben..." style="flex:1;background:var(--bg);border:1px solid var(--glass-border);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text);font-family:var(--font);outline:none;" />
+            <button class="share-action-btn primary" id="room-join-btn" style="padding:8px 12px;font-size:10px;">Beitreten</button>
+          </div>
+          
+          <button class="share-action-btn" id="room-create-btn" style="width:100%;justify-content:center;">
+            <span>✨</span>
+            <span>Neuen Raum erstellen</span>
+          </button>
+        </div>
+        
+        <div id="room-status" style="background:var(--accent-soft);border-radius:8px;padding:10px;margin-bottom:10px;display:none;">
+          <div style="font-size:10px;font-weight:600;color:var(--accent);margin-bottom:4px;" id="room-status-title">Verbindungsstatus</div>
+          <div style="font-size:10px;color:var(--text3);" id="room-status-text">Warte auf Verbindung...</div>
+        </div>
+        
+        <div id="room-info" style="background:var(--node-bg);border-radius:8px;padding:10px;display:none;">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:4px;">Deine Raum-ID:</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <code id="room-current-id" style="flex:1;font-size:10px;color:var(--accent);background:var(--bg);padding:6px 8px;border-radius:6px;word-break:break-all;"></code>
+            <button class="share-action-btn" id="room-copy-id" style="padding:6px 8px;font-size:9px;">📋</button>
+          </div>
+          <div style="font-size:9px;color:var(--text3);margin-top:8px;">Verbundene Teilnehmer: <span id="room-peer-count" style="color:var(--green);font-weight:600;">0</span></div>
+          <button class="share-action-btn danger" id="room-leave-btn" style="width:100%;margin-top:10px;justify-content:center;background:rgba(255,69,58,0.1);border-color:rgba(255,69,58,0.3);color:var(--red);">
+            <span>🚪</span>
+            <span>Raum verlassen</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2661,6 +2708,410 @@ window.addEventListener('load', () => {
 // Integration mit Canvas Drag-Export
 // Wenn Nodes ausgewählt und gezogen werden, können sie ins Share Dock gedroppt werden
 let draggedNodesForShare = null;
+
+// ===== TOFEESHARE LIVE ROOM MODULE v0.21 =====
+// WebRTC-basierte Echtzeit-Synchronisation mit PeerJS
+
+const LiveRoom = {
+  peer: null,
+  conn: null,
+  roomId: null,
+  isHost: false,
+  peers: [],
+  syncEnabled: true,
+  
+  // Initialisiert PeerJS
+  init() {
+    try {
+      this.peer = new Peer(null, {
+        debug: 2,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+      
+      this.peer.on('open', (id) => {
+        console.log('LiveRoom: Meine Peer-ID:', id);
+        this.updateRoomStatus('connected', 'Verbunden mit PeerJS-Server');
+      });
+      
+      this.peer.on('connection', (conn) => {
+        // Eingehende Verbindung (als Host)
+        this.handleConnection(conn);
+      });
+      
+      this.peer.on('error', (err) => {
+        console.error('LiveRoom Error:', err);
+        this.updateRoomStatus('error', 'Verbindungsfehler: ' + err.type);
+      });
+      
+      this.peer.on('disconnected', () => {
+        console.log('LiveRoom: Von Server getrennt');
+        this.updateRoomStatus('disconnected', 'Vom Server getrennt');
+      });
+    } catch (err) {
+      console.error('LiveRoom Init Error:', err);
+      this.updateRoomStatus('error', 'Initialisierung fehlgeschlagen');
+    }
+  },
+  
+  // Erstellt einen neuen Raum
+  createRoom() {
+    if (!this.peer || !this.peer.id) {
+      this.updateRoomStatus('error', 'Peer nicht verbunden');
+      return;
+    }
+    
+    this.roomId = this.peer.id;
+    this.isHost = true;
+    this.peers = [];
+    
+    document.getElementById('room-current-id').textContent = this.roomId;
+    document.getElementById('room-info').style.display = 'block';
+    document.getElementById('room-status').style.display = 'block';
+    document.getElementById('room-id-input').value = this.roomId;
+    
+    this.updateRoomStatus('connected', `Raum "${this.roomId}" erstellt. Warte auf Teilnehmer...`);
+    this.updatePeerCount();
+    
+    toast(`📡 Raum erstellt: ${this.roomId}`);
+  },
+  
+  // Tritt einem Raum bei
+  joinRoom(roomId) {
+    if (!roomId || !this.peer || !this.peer.id) {
+      this.updateRoomStatus('error', 'Ungültige Raum-ID oder nicht verbunden');
+      return;
+    }
+    
+    this.roomId = roomId;
+    this.isHost = false;
+    
+    try {
+      const conn = this.peer.connect(roomId, {
+        metadata: { type: 'client' }
+      });
+      
+      conn.on('open', () => {
+        console.log('LiveRoom: Verbunden mit Raum:', roomId);
+        this.conn = conn;
+        
+        document.getElementById('room-current-id').textContent = roomId;
+        document.getElementById('room-info').style.display = 'block';
+        document.getElementById('room-status').style.display = 'block';
+        
+        this.updateRoomStatus('connected', `Verbunden mit Raum "${roomId}"`);
+        this.updatePeerCount(1);
+        
+        // Board-State vom Host anfordern
+        this.send({ type: 'request-state' });
+        
+        toast(`📡 Raum beigetreten: ${roomId}`);
+      });
+      
+      conn.on('error', (err) => {
+        console.error('LiveRoom Connection Error:', err);
+        this.updateRoomStatus('error', 'Verbindung fehlgeschlagen');
+      });
+      
+      conn.on('close', () => {
+        console.log('LiveRoom: Verbindung geschlossen');
+        this.disconnect();
+      });
+      
+      conn.on('data', (data) => {
+        this.handleData(data);
+      });
+      
+    } catch (err) {
+      console.error('LiveRoom Join Error:', err);
+      this.updateRoomStatus('error', 'Beitritt fehlgeschlagen');
+    }
+  },
+  
+  // Verarbeitet eingehende Verbindung
+  handleConnection(conn) {
+    this.peers.push(conn);
+    
+    conn.on('open', () => {
+      console.log('LiveRoom: Neuer Peer verbunden');
+      this.updatePeerCount(this.peers.length);
+      
+      // Aktuellen Board-State senden
+      this.sendToPeer(conn, {
+        type: 'state-update',
+        data: this.getBoardState()
+      });
+    });
+    
+    conn.on('data', (data) => {
+      this.handleData(data);
+    });
+    
+    conn.on('close', () => {
+      this.peers = this.peers.filter(p => p !== conn);
+      this.updatePeerCount(this.peers.length);
+    });
+  },
+  
+  // Verarbeitet eingehende Daten
+  handleData(data) {
+    console.log('LiveRoom: Daten erhalten:', data.type);
+    
+    switch(data.type) {
+      case 'state-update':
+        // Board-State empfangen und anwenden
+        if (data.data) {
+          this.applyBoardState(data.data);
+        }
+        break;
+        
+      case 'node-add':
+        // Neue Node empfangen
+        if (data.node) {
+          nodes.push(data.node);
+          saveState();
+          render();
+          renderMinimap();
+          updateCounts();
+        }
+        break;
+        
+      case 'node-update':
+        // Node-Update empfangen
+        if (data.node && data.node.id) {
+          const idx = nodes.findIndex(n => n.id === data.node.id);
+          if (idx !== -1) {
+            nodes[idx] = { ...nodes[idx], ...data.node };
+            saveState();
+            render();
+          }
+        }
+        break;
+        
+      case 'node-delete':
+        // Node-Löschung empfangen
+        if (data.nodeId) {
+          nodes = nodes.filter(n => n.id !== data.nodeId);
+          conns = conns.filter(c => c.from !== data.nodeId && c.to !== data.nodeId);
+          saveState();
+          render();
+          renderMinimap();
+          updateCounts();
+        }
+        break;
+        
+      case 'conn-add':
+        // Neue Connection empfangen
+        if (data.conn) {
+          conns.push(data.conn);
+          saveState();
+          render();
+          renderMinimap();
+        }
+        break;
+        
+      case 'conn-delete':
+        // Connection-Löschung empfangen
+        if (data.connIndex !== undefined) {
+          conns.splice(data.connIndex, 1);
+          saveState();
+          render();
+          renderMinimap();
+        }
+        break;
+        
+      case 'request-state':
+        // State-Anfrage beantworten (nur als Host)
+        if (this.isHost) {
+          this.sendToPeer(data._conn, {
+            type: 'state-update',
+            data: this.getBoardState()
+          });
+        }
+        break;
+    }
+  },
+  
+  // Sendet Daten an alle Peers
+  send(data) {
+    if (this.isHost) {
+      // Als Host an alle Clients senden
+      this.peers.forEach(conn => {
+        if (conn.open) {
+          conn.send(data);
+        }
+      });
+    } else if (this.conn && this.conn.open) {
+      // Als Client zum Host senden
+      this.conn.send(data);
+    }
+  },
+  
+  // Sendet Daten an spezifischen Peer
+  sendToPeer(conn, data) {
+    if (conn && conn.open) {
+      conn.send(data);
+    }
+  },
+  
+  // Ruft aktuellen Board-State ab
+  getBoardState() {
+    return {
+      nodes: nodes.map(n => ({ ...n })),
+      conns: conns.map(c => ({ ...c })),
+      panX, panY, zoom
+    };
+  },
+  
+  // Wendet Board-State an
+  applyBoardState(state) {
+    if (!state || !state.nodes) return;
+    
+    nodes = state.nodes.map(n => ({ ...n }));
+    conns = state.conns ? state.conns.map(c => ({ ...c })) : [];
+    panX = state.panX || 0;
+    panY = state.panY || 0;
+    zoom = state.zoom || 1;
+    
+    saveState();
+    render();
+    renderMinimap();
+    updateCounts();
+    
+    toast('📡 Board-State synchronisiert');
+  },
+  
+  // Verlässt den Raum
+  leaveRoom() {
+    this.disconnect();
+    document.getElementById('room-info').style.display = 'none';
+    document.getElementById('room-status').style.display = 'none';
+    document.getElementById('room-id-input').value = '';
+    this.roomId = null;
+    this.isHost = false;
+    toast('🚪 Raum verlassen');
+  },
+  
+  // Trennt alle Verbindungen
+  disconnect() {
+    if (this.conn) {
+      this.conn.close();
+      this.conn = null;
+    }
+    if (this.peers) {
+      this.peers.forEach(p => p.close());
+      this.peers = [];
+    }
+    this.updatePeerCount(0);
+    this.updateRoomStatus('disconnected', 'Verbindung getrennt');
+  },
+  
+  // Aktualisiert Room-Status UI
+  updateRoomStatus(status, message) {
+    const statusEl = document.getElementById('room-status');
+    const titleEl = document.getElementById('room-status-title');
+    const textEl = document.getElementById('room-status-text');
+    
+    statusEl.style.display = 'block';
+    
+    switch(status) {
+      case 'connected':
+        statusEl.style.background = 'rgba(48,209,88,0.15)';
+        titleEl.style.color = 'var(--green)';
+        titleEl.textContent = '● Verbunden';
+        break;
+      case 'connecting':
+        statusEl.style.background = 'var(--accent-soft)';
+        titleEl.style.color = 'var(--accent)';
+        titleEl.textContent = '◍ Verbinde...';
+        break;
+      case 'disconnected':
+        statusEl.style.background = 'rgba(255,69,58,0.15)';
+        titleEl.style.color = 'var(--red)';
+        titleEl.textContent = '○ Getrennt';
+        break;
+      case 'error':
+        statusEl.style.background = 'rgba(255,69,58,0.15)';
+        titleEl.style.color = 'var(--red)';
+        titleEl.textContent = '✕ Fehler';
+        break;
+    }
+    
+    textEl.textContent = message;
+  },
+  
+  // Aktualisiert Peer-Anzeige
+  updatePeerCount(count) {
+    const el = document.getElementById('room-peer-count');
+    if (el) {
+      el.textContent = count !== undefined ? count : this.peers.length;
+    }
+  },
+  
+  // Kopiert Raum-ID
+  copyRoomId() {
+    if (this.roomId) {
+      navigator.clipboard.writeText(this.roomId).then(() => {
+        toast('📋 Raum-ID kopiert');
+      });
+    }
+  }
+};
+
+// Tab-Wechsel im Share Dock
+document.getElementById('tab-share').onclick = () => {
+  document.getElementById('share-tab-content').style.display = 'block';
+  document.getElementById('room-tab-content').style.display = 'none';
+  document.getElementById('tab-share').classList.add('primary');
+  document.getElementById('tab-room').classList.remove('primary');
+};
+
+document.getElementById('tab-room').onclick = () => {
+  document.getElementById('share-tab-content').style.display = 'none';
+  document.getElementById('room-tab-content').style.display = 'block';
+  document.getElementById('tab-room').classList.add('primary');
+  document.getElementById('tab-share').classList.remove('primary');
+  
+  // LiveRoom initialisieren beim ersten Öffnen
+  if (!LiveRoom.peer) {
+    LiveRoom.init();
+    LiveRoom.updateRoomStatus('connecting', 'Initialisiere PeerJS...');
+  }
+};
+
+// Room Event Listener
+document.getElementById('room-create-btn').onclick = () => {
+  if (!LiveRoom.peer) {
+    LiveRoom.init();
+  }
+  setTimeout(() => LiveRoom.createRoom(), 100);
+};
+
+document.getElementById('room-join-btn').onclick = () => {
+  const roomId = document.getElementById('room-id-input').value.trim();
+  if (roomId) {
+    if (!LiveRoom.peer) {
+      LiveRoom.init();
+    }
+    setTimeout(() => LiveRoom.joinRoom(roomId), 100);
+  } else {
+    LiveRoom.updateRoomStatus('error', 'Bitte Raum-ID eingeben');
+  }
+};
+
+document.getElementById('room-leave-btn').onclick = () => {
+  LiveRoom.leaveRoom();
+};
+
+document.getElementById('room-copy-id').onclick = () => {
+  LiveRoom.copyRoomId();
+};
+
+// ===== END TOFEESHARE LIVE ROOM MODULE =====
 
 // ===== END P2P SHARE MODULE =====
 </script>
