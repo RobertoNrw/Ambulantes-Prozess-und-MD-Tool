@@ -1626,31 +1626,68 @@ const InteropBridge = {
       
       if (importedData && importedData.nodes) {
         pH(); // History Punkt
-        importedData.nodes.forEach(n => {
-          nodes.push({
-            id: n.id || `imp-${Date.now()}-${Math.random()}`,
-            text: n.text || 'Importierter Node',
-            x: snV(n.x || Math.random() * 500),
-            y: snV(n.y || Math.random() * 500),
-            width: 240,
-            height: 140,
-            type: n.type || 'note',
-            color: n.color || '#ffffff',
-            items: n.items || []
-          });
+
+        // FIX B1: Valide Node-Typen + ID-Mapping für Connections
+        const validTypes = new Set(['text','sticky','checklist','group','table','link','diamond','ellipse','hexagon','image']);
+        const typeAlias = { note:'text', idea:'text', task:'checklist', card:'text', '': 'text' };
+        const idMap = {};
+
+        // Viewport-Zentrum (falls keine Positionen vorhanden)
+        const cssW = canvas.width / (window.devicePixelRatio || 1);
+        const cssH = canvas.height / (window.devicePixelRatio || 1);
+        const vcx = (cssW / 2 - vx) / vs;
+        const vcy = (cssH / 2 - vy) / vs;
+        let posCounter = 0;
+
+        importedData.nodes.forEach((n, idx) => {
+          let t = (n.type || '').toLowerCase();
+          if (typeAlias[t]) t = typeAlias[t];
+          if (!validTypes.has(t)) t = 'text';
+
+          // Position: nutze gegebene, sonst Spiral um Viewport-Mitte
+          let nx, ny;
+          if (typeof n.x === 'number' && typeof n.y === 'number') {
+            nx = n.x; ny = n.y;
+          } else {
+            const a = posCounter++ * 0.6, r = 60 + posCounter * 30;
+            nx = vcx + Math.cos(a) * r; ny = vcy + Math.sin(a) * r;
+          }
+
+          // Basis-Node über mN() für korrekte Defaults (bg, textColor, border, typeData)
+          const base = mN(t, n.text || 'Importierter Node', snV(nx), snV(ny));
+          if (n.width)  base.width  = n.width;
+          if (n.height) base.height = n.height;
+          if (n.bg)        base.bg = n.bg;
+          if (n.textColor) base.textColor = n.textColor;
+          if (n.border)    base.border = n.border;
+          if (n.typeData)  base.typeData = n.typeData;
+          else if (n.items && t === 'checklist') base.typeData = { items: n.items };
+          if (typeof n.locked === 'boolean') base.locked = n.locked;
+
+          if (n.id) idMap[n.id] = base.id;
+          nodes.push(base);
         });
-        
-        if (importedData.connections) {
-          importedData.connections.forEach(c => {
+
+        const importedConns = importedData.connections || importedData.conns || importedData.edges || [];
+        importedConns.forEach(c => {
+          const fromId = idMap[c.from || c.fromNode] || c.from;
+          const toId   = idMap[c.to   || c.toNode]   || c.to;
+          // Nur Connections übernehmen, deren Endpunkte existieren
+          if (fromId && toId && nodes.find(n=>n.id===fromId) && nodes.find(n=>n.id===toId)) {
             conns.push({
-              id: `conn-${Date.now()}-${Math.random()}`,
-              from: c.from,
-              to: c.to,
-              label: c.label || ''
+              id: 'c' + Date.now() + Math.random().toString(36).slice(2,6),
+              from: fromId,
+              to: toId,
+              fromSide: c.fromSide || 'right',
+              toSide: c.toSide || 'left',
+              label: c.label || '',
+              style: c.style || 'solid',
+              color: c.color || ''
             });
-          });
-        }
-        
+          }
+        });
+
+        uSB();
         sR();
         aS();
         toast(`✅ ${importedData.nodes.length} Nodes importiert`);
@@ -2093,53 +2130,75 @@ const P2PShare = {
     try {
       const decoded = decodeURIComponent(atob(encodedData));
       const parsed = JSON.parse(decoded);
-      
+
       if (parsed.type !== 'board-share' || !parsed.data) {
         throw new Error('Ungültiges Share-Format');
       }
-      
+
       const sharedData = parsed.data;
-      
-      // Nodes im sichtbaren Bereich platzieren
-      const viewportCenter = {
-        x: (-vx + canvas.width / 2) / vs,
-        y: (-vy + canvas.height / 2) / vs
-      };
-      
-      // Offset berechnen, um Nodes gruppiert zu platzieren
-      let minX = Infinity, minY = Infinity;
-      sharedData.nodes.forEach(n => {
-        if (n.x < minX) minX = n.x;
-        if (n.y < minY) minY = n.y;
-      });
-      
-      const offsetX = viewportCenter.x - minX;
-      const offsetY = viewportCenter.y - minY;
-      
-      // Nodes hinzufügen
-      sharedData.nodes.forEach(n => {
-        n.x += offsetX;
-        n.y += offsetY;
-        n.id = Date.now() + Math.random().toString(36).substr(2, 9);
-        nodes.push(n);
-      });
-      
-      // Connections hinzufügen (IDs anpassen)
-      if (sharedData.connections) {
-        sharedData.connections.forEach(c => {
-          conns.push({
-            from: c.from,
-            to: c.to,
-            label: c.label || ''
-          });
-        });
+      if (!sharedData.nodes || !sharedData.nodes.length) {
+        throw new Error('Keine Nodes im Share');
       }
-      
-      saveState();
-      render();
-      renderMinimap();
-      updateCounts();
-      
+
+      // Viewport-Zentrum in Welt-Koordinaten
+      const cssW = canvas.width / (window.devicePixelRatio || 1);
+      const cssH = canvas.height / (window.devicePixelRatio || 1);
+      const viewportCenter = {
+        x: (cssW / 2 - vx) / vs,
+        y: (cssH / 2 - vy) / vs
+      };
+
+      // Bounding-Box der geteilten Nodes
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      sharedData.nodes.forEach(n => {
+        minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+        maxX = Math.max(maxX, n.x + (n.width || 0));
+        maxY = Math.max(maxY, n.y + (n.height || 0));
+      });
+      const offsetX = viewportCenter.x - (minX + maxX) / 2;
+      const offsetY = viewportCenter.y - (minY + maxY) / 2;
+
+      pH();
+      // FIX S2: ID-Mapping aufbauen, damit Connections nicht verloren gehen
+      const idMap = {};
+      sharedData.nodes.forEach(n => {
+        const newId = 'n' + (++nc);
+        idMap[n.id] = newId;
+        // Vollständigen Node bauen — Defaults via mN() für ungültige Felder
+        const base = mN(n.type || 'text', n.text || '', (n.x || 0) + offsetX, (n.y || 0) + offsetY);
+        const merged = Object.assign(base, n, {
+          id: newId,
+          x: (n.x || 0) + offsetX,
+          y: (n.y || 0) + offsetY,
+          isSelected: false
+        });
+        nodes.push(merged);
+      });
+
+      // Connections mit gemappten IDs übernehmen
+      const sharedConns = sharedData.connections || sharedData.conns || sharedData.edges || [];
+      sharedConns.forEach(c => {
+        const fromId = idMap[c.from || c.fromNode];
+        const toId = idMap[c.to || c.toNode];
+        if (fromId && toId) {
+          conns.push({
+            id: 'c' + Date.now() + Math.random().toString(36).slice(2, 6),
+            from: fromId,
+            to: toId,
+            fromSide: c.fromSide || 'right',
+            toSide: c.toSide || 'left',
+            label: c.label || '',
+            style: c.style || 'solid',
+            color: c.color || ''
+          });
+        }
+      });
+
+      // FIX S1: korrekte Funktionsnamen statt saveState/renderMinimap/updateCounts
+      aS();
+      uSB();
+      sR();
+
       toast(`✅ ${sharedData.nodes.length} Node(s) importiert!`);
       return true;
     } catch (error) {
@@ -2364,9 +2423,9 @@ const LiveRoom = {
       });
       
       conn.on('data', (data) => {
-        this.handleData(data);
+        this.handleData(data, conn);
       });
-      
+
     } catch (err) {
       console.error('LiveRoom Join Error:', err);
       this.updateRoomStatus('error', 'Beitritt fehlgeschlagen');
@@ -2389,19 +2448,20 @@ const LiveRoom = {
     });
     
     conn.on('data', (data) => {
-      this.handleData(data);
+      // FIX S4: conn-Referenz mitgeben, damit Host gezielt antworten kann
+      this.handleData(data, conn);
     });
-    
+
     conn.on('close', () => {
       this.peers = this.peers.filter(p => p !== conn);
       this.updatePeerCount(this.peers.length);
     });
   },
-  
+
   // Verarbeitet eingehende Daten
-  handleData(data) {
+  handleData(data, conn) {
     console.log('LiveRoom: Daten erhalten:', data.type);
-    
+
     switch(data.type) {
       case 'state-update':
         // Board-State empfangen und anwenden
@@ -2466,9 +2526,9 @@ const LiveRoom = {
         break;
         
       case 'request-state':
-        // State-Anfrage beantworten (nur als Host)
-        if (this.isHost) {
-          this.sendToPeer(data._conn, {
+        // FIX S4: Antwort gezielt an anfragenden Client (conn aus handleData-Parameter)
+        if (this.isHost && conn) {
+          this.sendToPeer(conn, {
             type: 'state-update',
             data: this.getBoardState()
           });
