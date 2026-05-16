@@ -804,7 +804,7 @@ document.addEventListener('keydown',e=>{const tag=document.activeElement?.tagNam
 if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();openSP();return;}
 if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')){e.preventDefault();(async()=>{try{StorageManager.set('ic_v3',JSON.stringify(expD()));markSaved(Date.now(),'Lokal gespeichert');const ok=await saveToBackend();toast(ok?'💾 Gespeichert (Server + Lokal)':'💾 Lokal gespeichert');}catch(_){toast('❌ Speicherfehler');}})();return;}
 if(e.key==='?'||(e.shiftKey&&e.key==='/')){e.preventDefault();openHelp();return;}
-if(e.key==='Escape'){if(document.getElementById('help-modal').classList.contains('open')){closeHelp();e.preventDefault();return;}if($spotlight.classList.contains('open')){closeSP();e.preventDefault();return;}if($tplPicker.classList.contains('open')){closeTPL();e.preventDefault();return;}if(isConn){isConn=false;cStart=null;cStartPt=null;setCursor('default');sR();}closeCM();closeDD();closeCLE();closeTblEd();e.preventDefault();return;}
+if(e.key==='Escape'){if(document.getElementById('help-modal').classList.contains('open')){closeHelp();e.preventDefault();return;}if($spotlight.classList.contains('open')){closeSP();e.preventDefault();return;}if($tplPicker.classList.contains('open')){closeTPL();e.preventDefault();return;}if(document.getElementById('io-dropdown')?.style.display!=='none'||document.getElementById('smart-dropdown')?.style.display!=='none'){closeTbMenus();e.preventDefault();return;}if(isConn){isConn=false;cStart=null;cStartPt=null;setCursor('default');sR();}closeCM();closeDD();closeCLE();closeTblEd();e.preventDefault();return;}
 const step=e.shiftKey?10:1;
 switch(e.key){
 case'Delete':case'Backspace':if(selC){delC(selC);e.preventDefault();return;}if(selN.length){[...selN].forEach(n=>delN(n));e.preventDefault();}break;
@@ -986,7 +986,8 @@ function cvPos(sx,sy){const r=canvas.getBoundingClientRect();return s2c(sx-r.lef
 function closeCM(){$ctxMenu.style.display='none';}
 document.addEventListener('mousedown',e=>{if(!$ctxMenu.contains(e.target))closeCM();if(!$addDropdown.contains(e.target)&&!document.getElementById('btn-add').contains(e.target))closeDD();});
 
-function closeDD(){$addDropdown.classList.remove('open');document.getElementById('btn-add').setAttribute('aria-expanded','false');}
+function closeTbMenus(){['io-dropdown','smart-dropdown'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});['btn-io','btn-smart'].forEach(id=>{const b=document.getElementById(id);if(b){b.classList.remove('active');b.setAttribute('aria-expanded','false');}});}
+function closeDD(){$addDropdown.classList.remove('open');document.getElementById('btn-add').setAttribute('aria-expanded','false');closeTbMenus();}
 document.getElementById('btn-add').addEventListener('click',e=>{
   e.stopPropagation();
   const isOpen=$addDropdown.classList.toggle('open');
@@ -1012,6 +1013,14 @@ document.getElementById('btn-import').onclick=()=>{const inp=document.createElem
 document.getElementById('btn-clear').onclick=()=>{if(confirm('Canvas leeren?')){nodes=[];conns=[];clrS();nc=0;pH();aS();uSB();sR();toast('🗑');}};
 document.getElementById('btn-theme').onclick=()=>{document.documentElement.classList.toggle('light');isDark=!document.documentElement.classList.contains('light');updateThemeBtn();toast(isDark?'🌙 Dark':'☀️ Light');sR();};
 $zoomDisplay.onclick=()=>{vx=0;vy=0;vs=1;sR();};
+
+// ===== TOOLBAR DROPDOWNS =====
+function openTbMenu(btnId,ddId){const btn=document.getElementById(btnId),dd=document.getElementById(ddId);if(!btn||!dd)return;const isOpen=dd.style.display!=='none';closeTbMenus();if(!isOpen){const r=btn.getBoundingClientRect();const ddW=180;let left=Math.min(r.left,window.innerWidth-ddW-8);dd.style.left=left+'px';dd.style.top=(r.bottom+6)+'px';dd.style.display='block';btn.classList.add('active');btn.setAttribute('aria-expanded','true');}}
+{const b=document.getElementById('btn-io');if(b)b.addEventListener('click',e=>{e.stopPropagation();openTbMenu('btn-io','io-dropdown');});}
+{const b=document.getElementById('btn-smart');if(b)b.addEventListener('click',e=>{e.stopPropagation();openTbMenu('btn-smart','smart-dropdown');});}
+['io-dropdown','smart-dropdown'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',e=>{if(e.target.classList.contains('tb-dd-item')){setTimeout(closeTbMenus,80);}});});
+document.addEventListener('mousedown',e=>{['io-dropdown','smart-dropdown'].forEach(id=>{const dd=document.getElementById(id);const trigger=document.getElementById(id==='io-dropdown'?'btn-io':'btn-smart');if(dd&&dd.style.display!=='none'&&!dd.contains(e.target)&&!trigger.contains(e.target)){dd.style.display='none';trigger.classList.remove('active');trigger.setAttribute('aria-expanded','false');}});});
+
 document.getElementById('zoom-in').onclick=()=>{const _dpr=window.devicePixelRatio||1,ns=Math.min(6,vs*1.2),cx=canvas.width/(_dpr*2),cy=canvas.height/(_dpr*2);vx-=(cx-vx)*(ns-vs)/vs;vy-=(cy-vy)*(ns-vs)/vs;vs=ns;sR();};
 document.getElementById('zoom-out').onclick=()=>{const _dpr=window.devicePixelRatio||1,ns=Math.max(0.08,vs/1.2),cx=canvas.width/(_dpr*2),cy=canvas.height/(_dpr*2);vx-=(cx-vx)*(ns-vs)/vs;vy-=(cy-vy)*(ns-vs)/vs;vs=ns;sR();};
 
