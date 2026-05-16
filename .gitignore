@@ -1,1 +1,28 @@
-(index.html is a source file, so according to rule #6, since there are no build artifacts, dependencies, or temp files in the changes, the output should be empty)
+# Umgebungsvariablen – NIEMALS committen
+.env
+.env.local
+.env.production
+
+# Daten & Logs (werden zur Laufzeit erzeugt)
+data/
+!data/.gitkeep
+
+# Rate-Limit-Datei
+.ratelimit
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Abhängigkeiten
+node_modules/
+vendor/
+
+# Build-Artefakte
+*.log
