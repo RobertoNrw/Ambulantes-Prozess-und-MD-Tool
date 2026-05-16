@@ -46,6 +46,12 @@
   </span>
   <div class="tb-sep"></div>
   <button class="tb-btn" id="btn-add"     title="Node hinzufügen" role="button" aria-haspopup="true" aria-expanded="false" aria-controls="add-dropdown" tabindex="0">+ Node ▼</button>
+  <span class="tb-quick-templates">
+    <button class="tb-btn" id="quick-text"      title="Text-Node erstellen" tabindex="0">T</button>
+    <button class="tb-btn" id="quick-sticky"    title="Sticky Note erstellen" tabindex="0">S</button>
+    <button class="tb-btn" id="quick-checklist" title="Checkliste erstellen" tabindex="0">✓</button>
+    <button class="tb-btn" id="quick-table"     title="Tabelle erstellen" tabindex="0">⊞</button>
+  </span>
   <button class="tb-btn" id="btn-undo"    title="Rückgängig (Strg+Z)" role="button" aria-label="Rückgängig" tabindex="0">↶ Undo</button>
   <button class="tb-btn" id="btn-redo"    title="Wiederholen (Strg+Y)" role="button" aria-label="Wiederholen" tabindex="0">↷ Redo</button>
   <div class="tb-sep"></div>
@@ -418,10 +424,23 @@
         <button class="share-action-btn" id="tab-room"  style="flex:1;padding:6px 10px;font-size:10px;">📡 Live Room</button>
       </div>
       <div id="share-tab-content">
-        <div class="share-drop-zone" id="share-drop-zone" tabindex="0" role="button" aria-label="Drop-Zone für Nodes">
-          <div class="share-drop-icon">📦</div>
-          <div class="share-drop-text">Nodes hier ablegen</div>
-          <div class="share-drop-hint">oder Strg+V zum Einfügen</div>
+        <div class="share-drop-zone" id="share-drop-zone" tabindex="0" role="button" aria-label="Externe Inhalte ablegen">
+          <div class="share-drop-icon">⬇️</div>
+          <div class="share-drop-text">Inhalte hier ablegen</div>
+          <div class="share-drop-hint">URL · Text · Bild · Markdown · JSON</div>
+        </div>
+        <div id="widget-preview" style="display:none;background:var(--node-bg);border-radius:12px;padding:12px;margin-top:10px;border:1px solid var(--glass-border);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span id="widget-type-badge" style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:var(--accent-soft);color:var(--accent);"></span>
+            <button id="widget-cancel" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 6px;">✕</button>
+          </div>
+          <div id="widget-content-preview" style="font-size:11px;color:var(--text2);margin-bottom:10px;max-height:60px;overflow:hidden;word-break:break-all;"></div>
+          <button id="widget-create-primary" style="width:100%;padding:9px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);margin-bottom:6px;"></button>
+          <div style="display:flex;gap:4px;">
+            <button id="widget-as-text"   style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--glass-border);background:transparent;color:var(--text2);font-size:10px;cursor:pointer;font-family:var(--font);">📄 Text</button>
+            <button id="widget-as-sticky" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--glass-border);background:transparent;color:var(--text2);font-size:10px;cursor:pointer;font-family:var(--font);">📌 Sticky</button>
+            <button id="widget-as-check"  style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--glass-border);background:transparent;color:var(--text2);font-size:10px;cursor:pointer;font-family:var(--font);">✓ Liste</button>
+          </div>
         </div>
         <div class="share-actions">
           <button class="share-action-btn primary" id="share-generate-link"><span>🔗</span><span>Link erstellen</span></button>
@@ -455,7 +474,7 @@
             <div id="room-qr-canvas" style="display:inline-block;"></div>
             <div style="font-size:9px;color:#555;margin-top:8px;">Scannen, um direkt beizutreten</div>
           </div>
-          <div style="font-size:9px;color:var(--text3);margin-top:8px;">Verbundene Teilnehmer: <span id="room-peer-count" style="color:var(--green);font-weight:600;">0</span></div>
+          <div style="font-size:9px;color:var(--text3);margin-top:8px;">Verbundene Teilnehmer: <span id="room-peer-count" style="color:var(--green);font-weight:600;">0</span><span id="sync-indicator"></span></div>
           <button class="share-action-btn danger" id="room-leave-btn" style="width:100%;margin-top:10px;justify-content:center;"><span>🚪</span><span>Raum verlassen</span></button>
         </div>
       </div>

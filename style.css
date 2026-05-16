@@ -120,6 +120,7 @@ html, body {
 .tb-btn.danger:hover { background: rgba(255, 69, 58, 0.1); border-color: rgba(255, 69, 58, 0.3); color: var(--red); }
 
 .tb-sep { width: 1px; height: 18px; background: var(--glass-border); margin: 0 3px; flex-shrink: 0; }
+.tb-quick-templates { display:inline-flex; align-items:center; gap:2px; flex-shrink:0; pointer-events:auto; }
 
 /* ===== ADD DROPDOWN ===== */
 #add-dropdown {
@@ -742,6 +743,10 @@ html, body {
 .share-drop-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.7; }
 .share-drop-text { font-size: 12px; color: var(--text2); font-weight: 500; }
 .share-drop-hint { font-size: 10px; color: var(--text3); margin-top: 6px; }
+
+#sync-indicator { display:inline-flex; align-items:center; gap:4px; font-size:10px; color:var(--text3); margin-left:8px; }
+#sync-indicator.syncing { animation:pulse-sync 1s infinite; color:var(--green); }
+@keyframes pulse-sync { 0%, 100% { opacity:0.6; } 50% { opacity:1; } }
 
 .share-actions { display: flex; gap: 8px; margin-top: 14px; }
 .share-action-btn {

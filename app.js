@@ -994,6 +994,7 @@ document.getElementById('btn-add').addEventListener('click',e=>{
   }
 });
 document.querySelectorAll('#add-dropdown .dd-item').forEach(item=>{item.addEventListener('click',e=>{e.stopPropagation();const t=item.dataset.type;const cx=(canvas.width/2-vx)/vs,cy=(canvas.height/2-vy)/vs;let x=cx-125,y=cy-60;if(t==='sticky'){x=cx-90;y=cy-90;}if(t==='checklist'){x=cx-120;y=cy-90;}if(t==='group'){x=cx-190;y=cy-140;}if(t==='table'){x=cx-150;y=cy-100;}if(t==='link'){x=cx-60;y=cy-60;}if(t==='diamond'){x=cx-90;y=cy-70;}if(t==='ellipse'){x=cx-100;y=cy-60;}if(t==='hexagon'){x=cx-90;y=cy-80;}addN(t,x,y);closeDD();toast(t+' ✓');});});
+{const _dpr=window.devicePixelRatio||1;const vcX=()=>(canvas.width/_dpr/2-vx)/vs,vcY=()=>(canvas.height/_dpr/2-vy)/vs;const _qt=document.getElementById('quick-text');if(_qt)_qt.onclick=()=>addN('text',vcX()-125,vcY()-60,'');const _qs=document.getElementById('quick-sticky');if(_qs)_qs.onclick=()=>addN('sticky',vcX()-90,vcY()-90,'');const _qc=document.getElementById('quick-checklist');if(_qc)_qc.onclick=()=>addN('checklist',vcX()-120,vcY()-90,'');const _qb=document.getElementById('quick-table');if(_qb)_qb.onclick=()=>addN('table',vcX()-150,vcY()-100,'');}
 document.getElementById('btn-undo').onclick=undo;document.getElementById('btn-redo').onclick=redo;
 document.getElementById('btn-snap').onclick=()=>{snap=!snap;document.getElementById('btn-snap').classList.toggle('active',snap);toast(snap?'Snap ⊞':'Snap aus');sR();};
 document.getElementById('btn-fit').onclick=fitAll;document.getElementById('btn-search').onclick=openSP;document.getElementById('btn-tpl').onclick=openTPL;document.getElementById('btn-png').onclick=expPNG;
@@ -2631,7 +2632,86 @@ document.getElementById('share-copy-code').onclick = () => {
   P2PShare.copyCode();
 };
 
-// Drag & Drop Handler für Share Zone
+// ===== SMART WIDGET CREATOR =====
+const WidgetCreator = {
+  detected: null,
+
+  isURL(s) { return /^https?:\/\/.+/.test(s.trim()); },
+
+  analyze(e) {
+    const dt = e.dataTransfer;
+    // Files first
+    if (dt.files && dt.files.length) {
+      const f = dt.files[0];
+      if (f.type.startsWith('image/')) return { kind:'image', label:'🖼️ Bild', btn:'Als Bild einfügen', content:f, preview:'Bild: '+f.name };
+      if (f.name.endsWith('.json')) return { kind:'json', label:'📋 JSON', btn:'Als Board importieren', content:f, preview:'JSON: '+f.name };
+      if (f.name.endsWith('.md'))   return { kind:'markdown', label:'📝 Markdown', btn:'Als Text-Node einfügen', content:f, preview:'Markdown: '+f.name };
+      return { kind:'text', label:'📄 Datei', btn:'Als Text einfügen', content:f, preview:'Datei: '+f.name };
+    }
+    // URI / URL
+    const uri = dt.getData('text/uri-list') || dt.getData('text/html');
+    if (uri) {
+      const urlMatch = uri.match(/https?:\/\/[^\s"<>]+/);
+      if (urlMatch) return { kind:'url', label:'🔗 Link', btn:'Als Link-Bubble einfügen', content:urlMatch[0], preview:urlMatch[0] };
+    }
+    // Plain text
+    const txt = dt.getData('text/plain');
+    if (!txt) return null;
+    if (this.isURL(txt)) return { kind:'url', label:'🔗 Link', btn:'Als Link-Bubble einfügen', content:txt, preview:txt };
+    try { const p=JSON.parse(txt); if(p.nodes) return { kind:'board', label:'📦 Board-Nodes', btn:'Nodes importieren', content:p, preview:p.nodes.length+' Node(s)' }; } catch(_){}
+    if (/^(\s*[-*]\s.+\n?){2,}/.test(txt)||/^(\s*\d+\.\s.+\n?){2,}/.test(txt)) return { kind:'list', label:'✓ Liste', btn:'Als Checkliste einfügen', content:txt, preview:txt.slice(0,80) };
+    if (/^#{1,6}\s/.test(txt)||/\*\*/.test(txt)) return { kind:'markdown', label:'📝 Markdown', btn:'Als Text-Node einfügen', content:txt, preview:txt.slice(0,80) };
+    return { kind:'text', label:'📄 Text', btn:'Als Text-Node einfügen', content:txt, preview:txt.slice(0,80) };
+  },
+
+  showPreview(det) {
+    this.detected = det;
+    document.getElementById('widget-type-badge').textContent = det.label;
+    document.getElementById('widget-content-preview').textContent = det.preview;
+    document.getElementById('widget-create-primary').textContent = det.btn;
+    document.getElementById('widget-preview').style.display = 'block';
+  },
+
+  hide() {
+    this.detected = null;
+    document.getElementById('widget-preview').style.display = 'none';
+  },
+
+  vcX() { const d=window.devicePixelRatio||1; return (canvas.width/d/2-vx)/vs; },
+  vcY() { const d=window.devicePixelRatio||1; return (canvas.height/d/2-vy)/vs; },
+
+  async createNode(forceKind) {
+    const det = this.detected;
+    if (!det) return;
+    const kind = forceKind || det.kind;
+    const x = this.vcX(), y = this.vcY();
+
+    if (kind === 'board' && det.kind === 'board') {
+      if (typeof P2PShare !== 'undefined') P2PShare.handleDrop(det.content);
+      this.hide(); return;
+    }
+    if (kind === 'image' || det.kind === 'image') {
+      const reader = new FileReader();
+      reader.onload = ev => { const n=addN('image',x-150,y-100,''); n.typeData={src:ev.target.result}; aS(); sR(); };
+      reader.readAsDataURL(det.content instanceof File ? det.content : new Blob([det.content]));
+      this.hide(); return;
+    }
+    let text = det.content instanceof File ? await det.content.text() : det.content;
+    if (kind === 'url')      { const n=addN('link',x-60,y-60,''); n.typeData={url:text,title:text}; aS(); sR(); }
+    else if (kind === 'list' || kind === 'checklist') {
+      const lines = text.split('\n').map(l=>l.replace(/^[-*\d.]+\s*/,'')).filter(Boolean);
+      const n=addN('checklist',x-120,y-90,'');
+      n.typeData={title:'Liste',items:lines.map(l=>({text:l,done:false}))};
+      aS(); sR();
+    } else {
+      addN('sticky',x-90,y-90,text);
+    }
+    this.hide();
+    toast('✅ Widget erstellt');
+  }
+};
+
+// Drag & Drop Handler für Share Zone (Smart Widget Creator)
 const dropZone = document.getElementById('share-drop-zone');
 
 dropZone.addEventListener('dragover', (e) => {
@@ -2646,34 +2726,22 @@ dropZone.addEventListener('dragleave', () => {
 dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('drag-over');
-  
-  // Prüfen ob es sich um Board-Daten handelt
+  // Board-nodes drag (internal share)
   try {
-    const data = e.dataTransfer.getData('application/board-nodes');
-    if (data) {
-      const nodesData = JSON.parse(data);
-      P2PShare.handleDrop(nodesData);
-      return;
-    }
-  } catch (err) {
-    // Kein Board-Daten Format
-  }
-  
-  // Fallback: Text/JSON aus Clipboard versuchen
-  const textData = e.dataTransfer.getData('text/plain');
-  if (textData) {
-    try {
-      const parsed = JSON.parse(textData);
-      if (parsed.nodes) {
-        P2PShare.handleDrop(parsed);
-      } else {
-        P2PShare.updateStatus('❌ Keine Node-Daten erkannt', true);
-      }
-    } catch (err) {
-      P2PShare.updateStatus('❌ Ungültiges Format', true);
-    }
-  }
+    const boardData = e.dataTransfer.getData('application/board-nodes');
+    if (boardData) { P2PShare.handleDrop(JSON.parse(boardData)); return; }
+  } catch(_) {}
+  // External content → WidgetCreator
+  const det = WidgetCreator.analyze(e);
+  if (det) WidgetCreator.showPreview(det);
+  else toast('❌ Inhalt nicht erkannt');
 });
+
+document.getElementById('widget-create-primary').onclick = () => WidgetCreator.createNode();
+document.getElementById('widget-as-text').onclick   = () => WidgetCreator.createNode('text');
+document.getElementById('widget-as-sticky').onclick = () => WidgetCreator.createNode('text');
+document.getElementById('widget-as-check').onclick  = () => WidgetCreator.createNode('list');
+document.getElementById('widget-cancel').onclick    = () => WidgetCreator.hide();
 
 // Keyboard Shortcut für Paste (Strg+V) im Drop Zone
 dropZone.addEventListener('keydown', (e) => {
@@ -2685,15 +2753,15 @@ dropZone.addEventListener('keydown', (e) => {
         if (parsed.nodes || parsed.type === 'board-share') {
           const data = parsed.type === 'board-share' ? parsed.data : parsed;
           P2PShare.handleDrop(data);
-        } else {
-          P2PShare.updateStatus('❌ Keine Node-Daten erkannt', true);
+          return;
         }
-      } catch (err) {
-        P2PShare.updateStatus('❌ Ungültiges Format im Clipboard', true);
-      }
-    }).catch(err => {
-      P2PShare.updateStatus('❌ Clipboard-Zugriff verweigert', true);
-    });
+      } catch (_) {}
+      // Non-board clipboard text → WidgetCreator
+      const det = WidgetCreator.isURL(text)
+        ? { kind:'url', label:'🔗 Link', btn:'Als Link-Bubble einfügen', content:text, preview:text }
+        : { kind:'text', label:'📄 Text', btn:'Als Text-Node einfügen', content:text, preview:text.slice(0,80) };
+      WidgetCreator.showPreview(det);
+    }).catch(() => toast('❌ Clipboard-Zugriff verweigert'));
   }
 });
 
@@ -2872,6 +2940,14 @@ const LiveRoom = {
   // Verarbeitet eingehende Daten
   handleData(data, conn) {
     console.log('LiveRoom: Daten erhalten:', data.type);
+    // Sync indicator flash
+    const _si = document.getElementById('sync-indicator');
+    if (_si && data.type !== 'cursor-move') {
+      _si.textContent = ' ⟳';
+      _si.classList.add('syncing');
+      clearTimeout(this._syncTO);
+      this._syncTO = setTimeout(() => { _si.classList.remove('syncing'); _si.textContent = ''; }, 700);
+    }
 
     switch(data.type) {
       case 'state-update':
