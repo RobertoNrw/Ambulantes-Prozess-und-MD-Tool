@@ -1,5 +1,31 @@
 # Changelog - Infinite Canvas
 
+## v0.24 (2026) - Productivity Boost
+
+### ✨ Neue Features
+- **SVG-Export**: Skalierbare Vektorgrafik-Ausgabe (Toolbar-Button + Taste `S`)
+- **Help-Modal** (`?`): Übersichtliches Shortcuts-Panel mit Tipps & Tricks
+- **Auto-Grid** (`G`): Selektierte Nodes automatisch in Raster anordnen
+- **Focus-Modus** (`F`): Auswahl auf voller Canvas-Fläche zentrieren
+- **Sofort-Speichern** (`Strg+S`): Direkter Save zu Lokal + Server mit Bestätigung
+- **Spotlight-Filter**: Suche mit `type:sticky` o. ä. nach Node-Typ filtern
+
+### 🐛 Bug Fixes
+- Markdown-Import: `.md`-Dateien werden korrekt als Markdown erkannt, nicht mehr als Mermaid
+- Auto-Erkennung für Mermaid-Inhalte in Markdown-Dateien (`graph TD`)
+- Gruppen verschieben jetzt alle enthaltenen Nodes mit (Group-Drag)
+- Versionsnummern in `index.html`, `README.md` und Footer konsistent (v0.24)
+
+### 🎨 UX
+- Spotlight-Placeholder zeigt Filter-Syntax-Beispiel
+- Statusbar-Hint zeigt neue Shortcuts (`?`, `G`, `F`)
+- Toolbar erweitert um SVG- und Help-Buttons
+
+### 🔒 Sicherheit
+- HTML-Escaping in SVG-Export für alle Node-Texte (XSS-Schutz)
+
+---
+
 ## v4.0 (2026) - Major Security & Accessibility Update
 
 ### 🎨 Frontend Verbesserungen

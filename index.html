@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Infinite Canvas - Premium Design Tool für visuelle Zusammenarbeit">
   <meta name="theme-color" content="#1c1c1e">
-  <title>Infinite Canvas v4.0 - Premium Design Tool</title>
+  <title>Infinite Canvas v0.24 - Premium Design Tool</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js" crossorigin="anonymous"></script>
@@ -55,6 +55,7 @@
   <button class="tb-btn" id="btn-tpl"     title="Templates laden" role="button" aria-label="Templates" tabindex="0">⊞ Tpl</button>
   <div class="tb-sep"></div>
   <button class="tb-btn" id="btn-png"     title="Als PNG exportieren" role="button" aria-label="PNG Export" tabindex="0">↓ PNG</button>
+  <button class="tb-btn" id="btn-svg"     title="Als SVG exportieren (Taste S)" role="button" aria-label="SVG Export" tabindex="0">↓ SVG</button>
   <button class="tb-btn" id="btn-export"  title="Als JSON exportieren" role="button" aria-label="JSON Export" tabindex="0">↓ JSON</button>
   <button class="tb-btn" id="btn-import"  title="Aus JSON importieren" role="button" aria-label="Import" tabindex="0">📂 Import</button>
   <div class="tb-sep"></div>
@@ -66,6 +67,7 @@
   <div class="tb-sep"></div>
   <button class="tb-btn" id="btn-share"   title="P2P Share" role="button" aria-label="Share" tabindex="0">📤 Share</button>
   <div class="tb-sep"></div>
+  <button class="tb-btn" id="btn-help"    title="Tastatur-Hilfe (?)" role="button" aria-label="Hilfe" tabindex="0">❓</button>
   <button class="tb-btn" id="btn-theme"   title="Hell/Dunkel wechseln" role="button" aria-label="Theme" tabindex="0">🌙</button>
   <button class="tb-btn danger" id="btn-clear" title="Canvas leeren" role="button" aria-label="Leeren" tabindex="0">🗑 Leeren</button>
 </div>
@@ -74,7 +76,7 @@
 <div id="statusbar" style="display:none">
   <span><b id="node-count">0</b> Nodes</span>
   <span><b id="conn-count">0</b> Conn</span>
-  <span id="hint"><b>Dblclick</b>=Node · <b>Shift+Drag</b>=Connect · <b>⌘K</b>=Suche · <b>D</b>=Dup</span>
+  <span id="hint"><b>?</b>=Hilfe · <b>Dblclick</b>=Node · <b>Shift+Drag</b>=Connect · <b>⌘K</b>=Suche · <b>G</b>=Grid · <b>F</b>=Fokus</span>
   <span id="zoom-display" title="Zoom zurücksetzen" role="button" tabindex="0" aria-label="Zoom zurücksetzen">100%</span>
   <span class="zoom-controls">
     <button id="zoom-out" aria-label="Herauszoomen" tabindex="0">−</button>
@@ -107,7 +109,7 @@
 <!-- ===== SPOTLIGHT ===== -->
 <div id="spotlight" role="dialog" aria-modal="true">
   <div id="spotlight-box">
-    <input id="spotlight-input" placeholder="Nodes suchen… (Esc)" aria-label="Suche" role="searchbox">
+    <input id="spotlight-input" placeholder="Nodes suchen… z. B. type:sticky text (Esc)" aria-label="Suche" role="searchbox">
     <div id="spotlight-results" role="listbox"></div>
   </div>
 </div>
@@ -154,6 +156,68 @@
 <!-- ===== MINIMAP ===== -->
 <div id="minimap" style="display:none" role="img" aria-label="Minimap Übersicht">
   <canvas id="minimap-canvas"></canvas>
+</div>
+
+<!-- ===== SHORTCUTS HELP ===== -->
+<div id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div id="help-box">
+    <div id="help-header">
+      <span id="help-title">⌨️ Tastatur-Shortcuts &amp; Tipps</span>
+      <button id="help-close" aria-label="Schließen">✕</button>
+    </div>
+    <div id="help-content">
+      <section>
+        <h3>📐 Canvas</h3>
+        <kbd>Doppelklick</kbd> Node erstellen ·
+        <kbd>Strg/⌘ + Klick</kbd> Pan ·
+        <kbd>Mausrad</kbd> Zoom ·
+        <kbd>1</kbd> Fit to Screen ·
+        <kbd>Shift + Drag</kbd> Connection
+      </section>
+      <section>
+        <h3>✏️ Bearbeiten</h3>
+        <kbd>Strg + Z</kbd> Undo ·
+        <kbd>Strg + Y</kbd> / <kbd>Strg + Shift + Z</kbd> Redo ·
+        <kbd>Strg + C</kbd> Kopieren ·
+        <kbd>Strg + V</kbd> Einfügen ·
+        <kbd>D</kbd> Duplizieren ·
+        <kbd>L</kbd> Sperren ·
+        <kbd>Entf</kbd> Löschen
+      </section>
+      <section>
+        <h3>🎯 Auswahl &amp; Navigation</h3>
+        <kbd>Strg + A</kbd> Alles auswählen ·
+        <kbd>Strg + K</kbd> Spotlight-Suche ·
+        <kbd>Pfeiltasten</kbd> Verschieben (Shift = 10px) ·
+        <kbd>N</kbd> Neuer Text-Node ·
+        <kbd>Esc</kbd> Schließen
+      </section>
+      <section>
+        <h3>🆕 Neu in v0.24</h3>
+        <kbd>?</kbd> Diese Hilfe ·
+        <kbd>G</kbd> Auto-Grid für Auswahl ·
+        <kbd>F</kbd> Fokus-Modus (Selektion zentrieren) ·
+        <kbd>S</kbd> SVG-Export ·
+        <kbd>Strg + S</kbd> Sofort speichern
+      </section>
+      <section>
+        <h3>🔍 Spotlight-Suche</h3>
+        <code>type:sticky Notiz</code> – nur Sticky-Notes durchsuchen<br>
+        <code>type:checklist</code> – nur Checklisten<br>
+        <code>type:link</code> – nur Link-Bubbles
+      </section>
+      <section>
+        <h3>💡 Profi-Tipps</h3>
+        <ul>
+          <li>Gruppen ziehen jetzt enthaltene Nodes automatisch mit</li>
+          <li>Rechtsklick öffnet das Kontextmenü mit Node-Aktionen</li>
+          <li>Connections per Klick auf das Label umbenennen</li>
+          <li>Drag &amp; Drop von Bildern direkt auf das Canvas</li>
+          <li>P2P-Share Dock: Nodes per Drag &amp; Drop teilen</li>
+        </ul>
+      </section>
+    </div>
+  </div>
 </div>
 
 <!-- ===== LIGHTBOX ===== -->
@@ -299,8 +363,8 @@
 
 <!-- ===== FOOTER ===== -->
 <div id="rb-footer">
-  &copy; 2026 Roberto Bonavita · v0.23 PREDICTIVE WORKFLOW ·
-  <span style="color:var(--green);">✓ Pattern Recognition · ✓ Auto-Layout · ✓ Multi-Format Export/Import · ✓ Reference Detection · ✓ P2P Share · ✓ Live Room Sync · ✓ Predictive Macros</span>
+  &copy; 2026 Roberto Bonavita · v0.24 PRODUCTIVITY BOOST ·
+  <span style="color:var(--green);">✓ SVG Export · ✓ Auto-Grid · ✓ Focus Mode · ✓ Help Panel · ✓ Search Filters · ✓ Group Drag · ✓ Pattern Recognition · ✓ P2P Share</span>
 </div>
 
 <!-- ===== P2P SHARE DOCK ===== -->
