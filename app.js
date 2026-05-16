@@ -999,6 +999,7 @@ document.getElementById('btn-snap').onclick=()=>{snap=!snap;document.getElementB
 document.getElementById('btn-fit').onclick=fitAll;document.getElementById('btn-search').onclick=openSP;document.getElementById('btn-tpl').onclick=openTPL;document.getElementById('btn-png').onclick=expPNG;
 {const _svg=document.getElementById('btn-svg');if(_svg)_svg.onclick=expSVG;}
 {const _help=document.getElementById('btn-help');if(_help)_help.onclick=openHelp;}
+{const _mac=document.getElementById('btn-macros');if(_mac)_mac.onclick=()=>{if(typeof PredictiveWorkflow!=='undefined')PredictiveWorkflow.openMacroPanel();};}
 {const _hc=document.getElementById('help-close');if(_hc)_hc.onclick=closeHelp;}
 {const _hm=document.getElementById('help-modal');if(_hm)_hm.addEventListener('mousedown',e=>{if(e.target===_hm)closeHelp();});}
 document.getElementById('btn-export').onclick=()=>{const b=new Blob([JSON.stringify(expD(),null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='canvas-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u);toast('JSON ↓');};
@@ -2327,6 +2328,65 @@ document.getElementById('btn-import-clipboard').onclick = async () => {
   }
 };
 
+// FIX B5: Webhook-UI verkabeln (URL speichern, testen)
+(function setupWebhookUI(){
+  const $url = document.getElementById('webhook-url-input');
+  const $save = document.getElementById('webhook-save-btn');
+  const $test = document.getElementById('webhook-test-btn');
+  const $status = document.getElementById('webhook-status');
+  if (!$url || !$save || !$test) return;
+
+  // Vorherigen Wert aus Storage laden
+  $url.value = StorageManager.get('ic_webhook_url') || '';
+
+  const showStatus = (msg, color) => {
+    $status.style.display = 'block';
+    $status.textContent = msg;
+    $status.style.color = color || 'var(--text3)';
+  };
+
+  $save.onclick = () => {
+    const url = $url.value.trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      showStatus('❌ URL muss mit http(s):// beginnen', 'var(--red)');
+      return;
+    }
+    StorageManager.set('ic_webhook_url', url);
+    showStatus(url ? '✅ Webhook gespeichert' : 'Webhook entfernt', 'var(--green)');
+    toast(url ? '💾 Webhook gespeichert' : '🗑 Webhook entfernt');
+  };
+
+  $test.onclick = async () => {
+    const url = $url.value.trim();
+    if (!url) { showStatus('❌ URL eingeben', 'var(--red)'); return; }
+    if (!/^https?:\/\//i.test(url)) { showStatus('❌ URL muss mit http(s):// beginnen', 'var(--red)'); return; }
+    showStatus('⏳ Sende…', 'var(--text2)');
+    const payload = {
+      event: 'board.test',
+      timestamp: new Date().toISOString(),
+      source: 'Infinite Canvas v0.24',
+      data: InteropBridge.exportToFormat ? JSON.parse(InteropBridge.exportToFormat('json')) : expD()
+    };
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        mode: 'cors'
+      });
+      if (res.ok) {
+        showStatus(`✅ Erfolgreich (HTTP ${res.status})`, 'var(--green)');
+        toast('🚀 Webhook gesendet');
+      } else {
+        showStatus(`⚠️ HTTP ${res.status} – Endpunkt erreicht, aber Antwort ist Fehler`, '#FF9F0A');
+      }
+    } catch (e) {
+      // CORS-Fehler oder kein Netz
+      showStatus(`❌ ${e.message} (oft CORS-blockiert)`, 'var(--red)');
+    }
+  };
+})();
+
 // API Generator
 document.getElementById('btn-generate-api').onclick = () => {
   const api = InteropBridge.generateLocalAPI();
@@ -3132,6 +3192,55 @@ document.getElementById('room-copy-id').onclick = () => {
   LiveRoom.copyRoomId();
 };
 
+// FIX S8: QR-Code anzeigen für Mobile-Beitritt
+document.getElementById('room-show-qr').onclick = () => {
+  const container = document.getElementById('room-qr-container');
+  const target = document.getElementById('room-qr-canvas');
+  if (!LiveRoom.roomId) { toast('Erst Raum erstellen'); return; }
+  if (container.style.display === 'block') {
+    container.style.display = 'none';
+    return;
+  }
+  if (typeof qrcode === 'undefined') {
+    toast('QR-Code-Bibliothek nicht geladen');
+    return;
+  }
+  try {
+    // URL mit Auto-Join-Hash, sodass Scan direkt verbindet
+    const joinUrl = `${window.location.origin}${window.location.pathname}#room=${encodeURIComponent(LiveRoom.roomId)}`;
+    const qr = qrcode(0, 'M'); // Type 0 = auto, Error correction Medium
+    qr.addData(joinUrl);
+    qr.make();
+    // 4px cell size, 2 module margin
+    target.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+    const svg = target.querySelector('svg');
+    if (svg) { svg.style.maxWidth = '180px'; svg.style.width = '100%'; svg.style.height = 'auto'; }
+    container.style.display = 'block';
+  } catch (e) {
+    console.error('QR-Code-Generierung fehlgeschlagen', e);
+    toast('❌ QR-Code-Fehler');
+  }
+};
+
+// Auto-Join via Hash beim Page-Load (vom QR-Scan)
+window.addEventListener('load', () => {
+  const m = (window.location.hash || '').match(/^#room=(.+)$/);
+  if (!m) return;
+  const roomId = decodeURIComponent(m[1]);
+  setTimeout(() => {
+    // Share-Dock + Room-Tab öffnen
+    P2PShare.open();
+    document.getElementById('tab-room').click();
+    if (!LiveRoom.peer) LiveRoom.init();
+    setTimeout(() => {
+      document.getElementById('room-id-input').value = roomId;
+      LiveRoom.joinRoom(roomId);
+      // Hash entfernen (verhindert Re-Join bei Refresh)
+      history.replaceState({}, document.title, window.location.pathname);
+    }, 400);
+  }, 800);
+});
+
 // ===== END TOFEESHARE LIVE ROOM MODULE =====
 
 // ===== PREDICTIVE WORKFLOW MODULE v0.23 =====
@@ -3277,28 +3386,138 @@ const PredictiveWorkflow = {
   },
   
   saveMacro(pattern) {
+    // FIX A7: Konkretes Recipe statt nur Pattern-String — basierend auf letzten 3 Actions
+    const recent = this.actionHistory.slice(-3);
+    const recipe = recent.map(a => ({
+      type: a.type,
+      data: a.data || {}
+    }));
+    // Default-Name aus dem Pattern
+    const niceName = pattern.replace(/createNode/g, 'Node').replace(/connectNodes/g, '→').replace(/->/g, ' ');
     const macro = {
       id: `macro_${Date.now()}`,
       pattern,
-      actions: pattern.split('->'),
-      created: Date.now()
+      name: niceName,
+      recipe,
+      created: Date.now(),
+      uses: 0
     };
-    
     this.macros.push(macro);
     this.saveToStorage();
-    
-    // Show confirmation
-    this.showSuggestion(`✅ Macro gespeichert! Du kannst es jetzt über die Toolbar nutzen.`, () => {});
+    this.showSuggestion(`✅ Macro „${niceName}" gespeichert. Über die Toolbar (🧠) ausführbar.`, () => {});
   },
-  
+
+  // FIX A7: Macro ausführen — interpretiert das Recipe
   executeMacro(macroId) {
     const macro = this.macros.find(m => m.id === macroId);
-    if (!macro) return;
-    
-    console.log('🔄 Executing macro:', macro.pattern);
-    // Hier würde die tatsächliche Ausführung der Aktionen erfolgen
-    // Für jetzt nur Demo
-    alert(`Macro würde ausführen: ${macro.pattern}`);
+    if (!macro || !macro.recipe || !macro.recipe.length) {
+      toast('⚠️ Macro hat kein Recipe');
+      return;
+    }
+    // Auto-Save & History während der Replay-Phase nicht hetzen
+    const cssW = canvas.width / (window.devicePixelRatio || 1);
+    const cssH = canvas.height / (window.devicePixelRatio || 1);
+    const baseX = (cssW / 2 - vx) / vs - 60;
+    const baseY = (cssH / 2 - vy) / vs - 40;
+    const created = [];
+    let cx = baseX, cy = baseY;
+
+    macro.recipe.forEach((step, i) => {
+      if (step.type === 'createNode') {
+        const t = (step.data && step.data.type) || 'text';
+        const n = addN(t, cx, cy);
+        created.push(n);
+        cx += 280; // nächster Slot daneben
+      } else if (step.type === 'connectNodes' && created.length >= 2) {
+        const a = created[created.length - 2], b = created[created.length - 1];
+        const { fromSide, toSide } = bSides(a, b);
+        conns.push({
+          id: 'c' + Date.now() + i,
+          from: a.id, to: b.id,
+          fromSide, toSide,
+          label: '', style: 'solid', color: ''
+        });
+        pH(); aS(); uSB(); sR();
+        emit('connectionCreated', { from: a.id, to: b.id });
+      } else if (step.type === 'deleteNode' && created.length) {
+        const target = created.pop();
+        if (target) delN(target);
+      }
+    });
+
+    macro.uses = (macro.uses || 0) + 1;
+    this.saveToStorage();
+    toast(`🧠 Macro „${macro.name || macro.pattern}" ausgeführt`);
+    if (created.length) {
+      clrS();
+      created.forEach(n => addS(n));
+      sR();
+    }
+  },
+
+  // FIX A7: UI-Panel für Macros
+  openMacroPanel() {
+    let panel = document.getElementById('macro-panel');
+    if (panel) { panel.remove(); return; }
+    panel = document.createElement('div');
+    panel.id = 'macro-panel';
+    panel.style.cssText = `
+      position: fixed; top: 60px; right: 16px; z-index: 9960;
+      width: min(360px, 92vw); max-height: 70vh; overflow-y: auto;
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 12px; box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(40px) saturate(180%);
+      padding: 14px;
+    `;
+    const stats = this.getStats();
+    let html = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-weight:600;font-size:13px;color:var(--text);">🧠 Macros</div>
+        <button id="macro-close" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;">✕</button>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:12px;">${stats.totalActions} Aktionen · ${stats.patternsDetected} Muster · ${stats.macrosSaved} Macros</div>
+    `;
+    if (!this.macros.length) {
+      html += `<div style="text-align:center;padding:24px 12px;color:var(--text3);font-size:12px;line-height:1.6;">
+        Noch keine Macros.<br>
+        Wiederhole eine Aktionsfolge (z.B. Node + Node + Connect) 3× —<br>
+        ich schlage sie dir dann als Macro vor.
+      </div>`;
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+      this.macros.forEach((m, idx) => {
+        const name = escapeHtml(m.name || m.pattern || `Macro ${idx+1}`);
+        html += `
+          <div style="padding:10px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--glass-border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-weight:600;font-size:12px;color:var(--text);">${name}</div>
+              <div style="font-size:9px;color:var(--text3);">${m.uses || 0}× genutzt</div>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:8px;font-family:'SF Mono',Menlo,monospace;">${escapeHtml(m.pattern || '')}</div>
+            <div style="display:flex;gap:6px;">
+              <button class="macro-run-btn" data-id="${m.id}" style="flex:1;padding:6px;border-radius:5px;border:none;background:var(--accent);color:#fff;font-size:11px;cursor:pointer;font-family:var(--font);font-weight:500;">▶ Ausführen</button>
+              <button class="macro-del-btn" data-id="${m.id}" style="padding:6px 10px;border-radius:5px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:11px;cursor:pointer;font-family:var(--font);">🗑</button>
+            </div>
+          </div>`;
+      });
+      html += '</div>';
+    }
+    panel.innerHTML = html;
+    document.body.appendChild(panel);
+
+    panel.querySelector('#macro-close').onclick = () => panel.remove();
+    panel.querySelectorAll('.macro-run-btn').forEach(btn => {
+      btn.onclick = () => { this.executeMacro(btn.dataset.id); };
+    });
+    panel.querySelectorAll('.macro-del-btn').forEach(btn => {
+      btn.onclick = () => {
+        if (!confirm('Macro wirklich löschen?')) return;
+        this.macros = this.macros.filter(m => m.id !== btn.dataset.id);
+        this.saveToStorage();
+        panel.remove();
+        this.openMacroPanel();
+      };
+    });
   },
   
   saveToStorage() {

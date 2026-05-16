@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Infinite Canvas - Premium Design Tool für visuelle Zusammenarbeit">
   <meta name="theme-color" content="#1c1c1e">
-  <title>Infinite Canvas v0.24 - Premium Design Tool</title>
+  <title>Infinite Canvas v0.25 - Premium Design Tool</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cdefs%3E%3ClinearGradient id='fgrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23007AFF'/%3E%3Cstop offset='25%25' stop-color='%2300C7FD'/%3E%3Cstop offset='50%25' stop-color='%2334C759'/%3E%3Cstop offset='75%25' stop-color='%23FF9500'/%3E%3Cstop offset='100%25' stop-color='%23FF3B30'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='18' y='18' width='204' height='204' rx='56' fill='none' stroke='url(%23fgrad)' stroke-width='4'/%3E%3Ccircle cx='80' cy='80' r='32' stroke='%23007AFF' stroke-width='2.5' fill='none' opacity='0.7'/%3E%3Ccircle cx='160' cy='80' r='32' stroke='%2300C7FD' stroke-width='2.5' fill='none' opacity='0.7'/%3E%3Ccircle cx='120' cy='160' r='36' stroke='%2334C759' stroke-width='2.5' fill='none' opacity='0.7'/%3E%3Cline x1='80' y1='80' x2='160' y2='80' stroke='url(%23fgrad)' stroke-width='2.5' opacity='0.6' stroke-linecap='round'/%3E%3Cline x1='80' y1='80' x2='120' y2='160' stroke='url(%23fgrad)' stroke-width='2.5' opacity='0.6' stroke-linecap='round'/%3E%3Cline x1='160' y1='80' x2='120' y2='160' stroke='url(%23fgrad)' stroke-width='2.5' opacity='0.6' stroke-linecap='round'/%3E%3Ccircle cx='80' cy='80' r='7' fill='%23007AFF'/%3E%3Ccircle cx='160' cy='80' r='7' fill='%2300C7FD'/%3E%3Ccircle cx='120' cy='160' r='8' fill='%2334C759'/%3E%3Ctext x='120' y='130' font-family='Arial,sans-serif' font-size='52' font-weight='900' text-anchor='middle' fill='url(%23fgrad)' letter-spacing='-2'%3ERB%3C/text%3E%3C/svg%3E">
 </head>
@@ -62,6 +63,7 @@
   <button class="tb-btn" id="btn-tm"      title="Backups wiederherstellen" role="button" aria-label="Backups" tabindex="0">🕰️ Backups</button>
   <div class="tb-sep"></div>
   <button class="tb-btn" id="btn-ai"      title="AI Organizer" role="button" aria-label="AI" tabindex="0">🤖 AI</button>
+  <button class="tb-btn" id="btn-macros"  title="Macros (gelernte Aktionsfolgen)" role="button" aria-label="Macros" tabindex="0">🧠 Macros</button>
   <div class="tb-sep"></div>
   <button class="tb-btn" id="btn-interop" title="Interoperability Bridge" role="button" aria-label="Bridge" tabindex="0">🔗 Bridge</button>
   <div class="tb-sep"></div>
@@ -207,6 +209,31 @@
         <code>type:link</code> – nur Link-Bubbles
       </section>
       <section>
+        <h3>🧠 AI &amp; Macros</h3>
+        <ul>
+          <li><b>🤖 AI Organizer:</b> Cluster, Inseln, Duplikate (jetzt mit Fuzzy-Matching), echtes Force-Directed Auto-Layout</li>
+          <li><b>🧠 Macros:</b> Wiederhole eine Aktionsfolge 3× → wird als Macro vorgeschlagen, später über die Toolbar abrufbar</li>
+          <li><b>📐 Cluster-Button:</b> Verbundene Nodes werden in Gruppen-Container neu angeordnet</li>
+        </ul>
+      </section>
+      <section>
+        <h3>📡 Live Room &amp; Share</h3>
+        <ul>
+          <li>Andere Teilnehmer sehen jetzt deinen Cursor in Echtzeit</li>
+          <li><b>📱 QR-Code:</b> Im Room-Info Panel → Beitritt per Handy-Scan</li>
+          <li>Änderungen werden automatisch via PeerJS broadcasted</li>
+          <li>Hash-URL <code>#room=ID</code> tritt nach Page-Load automatisch bei</li>
+        </ul>
+      </section>
+      <section>
+        <h3>🔗 Bridge</h3>
+        <ul>
+          <li><b>Mermaid-Import:</b> versteht Shapes <code>[]</code>, <code>()</code>, <code>{}</code>, <code>[[]]</code>, <code>(())</code></li>
+          <li><b>CSV-Import:</b> Header <code>ID,Text,Type,X,Y</code></li>
+          <li><b>🔔 Webhook:</b> Refs-Tab → Board-Snapshot per POST senden (Zapier, n8n, eigene Endpunkte)</li>
+        </ul>
+      </section>
+      <section>
         <h3>💡 Profi-Tipps</h3>
         <ul>
           <li>Gruppen ziehen jetzt enthaltene Nodes automatisch mit</li>
@@ -341,7 +368,18 @@
       </div>
       <div id="interop-refs" style="display:none;">
         <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Automatisch erkannte externe Referenzen:</div>
-        <div id="interop-results-list" style="max-height:400px;overflow-y:auto;"></div>
+        <div id="interop-results-list" style="max-height:280px;overflow-y:auto;margin-bottom:14px;"></div>
+        <!-- Webhook-Bereich -->
+        <div style="border-top:1px solid var(--glass-border);padding-top:14px;">
+          <div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:8px;">🔔 Webhook senden</div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:10px;">Sendet einen Board-Snapshot (JSON) per POST an deine URL. Praktisch für Zapier, n8n, Slack, eigene Endpunkte.</div>
+          <input type="url" id="webhook-url-input" placeholder="https://hooks.example.com/…" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--glass-border);background:var(--bg);color:var(--text);font-size:11px;font-family:var(--font);margin-bottom:8px;outline:none;">
+          <div style="display:flex;gap:6px;">
+            <button id="webhook-save-btn" style="flex:1;padding:7px 10px;border-radius:6px;border:1px solid var(--glass-border);background:transparent;color:var(--text);font-size:11px;cursor:pointer;font-family:var(--font);">💾 Speichern</button>
+            <button id="webhook-test-btn" style="flex:1;padding:7px 10px;border-radius:6px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);font-size:11px;cursor:pointer;font-family:var(--font);font-weight:500;">🚀 Test senden</button>
+          </div>
+          <div id="webhook-status" style="font-size:10px;color:var(--text3);margin-top:8px;display:none;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -363,8 +401,8 @@
 
 <!-- ===== FOOTER ===== -->
 <div id="rb-footer">
-  &copy; 2026 Roberto Bonavita · v0.24 PRODUCTIVITY BOOST ·
-  <span style="color:var(--green);">✓ SVG Export · ✓ Auto-Grid · ✓ Focus Mode · ✓ Help Panel · ✓ Search Filters · ✓ Group Drag · ✓ Pattern Recognition · ✓ P2P Share</span>
+  &copy; 2026 Roberto Bonavita · v0.25 COLLABORATION REWORK ·
+  <span style="color:var(--green);">✓ Live Cursors · ✓ QR Room Join · ✓ Force-Directed Layout · ✓ Fuzzy Duplicates · ✓ Webhooks · ✓ Executable Macros · ✓ Cluster-to-Groups · ✓ Auto-Sync</span>
 </div>
 
 <!-- ===== P2P SHARE DOCK ===== -->
@@ -411,6 +449,11 @@
           <div style="display:flex;gap:6px;align-items:center;">
             <code id="room-current-id" style="flex:1;font-size:10px;color:var(--accent);background:var(--bg);padding:6px 8px;border-radius:6px;word-break:break-all;"></code>
             <button class="share-action-btn" id="room-copy-id" style="padding:6px 8px;font-size:9px;">📋</button>
+            <button class="share-action-btn" id="room-show-qr" title="QR-Code anzeigen" style="padding:6px 8px;font-size:11px;">📱</button>
+          </div>
+          <div id="room-qr-container" style="display:none;margin-top:10px;padding:12px;background:#fff;border-radius:8px;text-align:center;">
+            <div id="room-qr-canvas" style="display:inline-block;"></div>
+            <div style="font-size:9px;color:#555;margin-top:8px;">Scannen, um direkt beizutreten</div>
           </div>
           <div style="font-size:9px;color:var(--text3);margin-top:8px;">Verbundene Teilnehmer: <span id="room-peer-count" style="color:var(--green);font-weight:600;">0</span></div>
           <button class="share-action-btn danger" id="room-leave-btn" style="width:100%;margin-top:10px;justify-content:center;"><span>🚪</span><span>Raum verlassen</span></button>
