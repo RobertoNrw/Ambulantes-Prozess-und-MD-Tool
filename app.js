@@ -145,7 +145,21 @@ function uSB(){
 }
 
 let _ast=null;
-function aS(){setSaveIndicator('Speichert…','#FF9F0A');clearTimeout(_ast);_ast=setTimeout(async()=>{try{StorageManager.set('ic_v3',JSON.stringify(expD()));markSaved(Date.now(),'Lokal gespeichert');await saveToBackend();}catch(e){setSaveIndicator('Speicherfehler','#FF453A');}},400);}
+function aS(){
+  setSaveIndicator('Speichert…','#FF9F0A');
+  clearTimeout(_ast);
+  _ast=setTimeout(async()=>{
+    try{
+      StorageManager.set('ic_v3',JSON.stringify(expD()));
+      markSaved(Date.now(),'Lokal gespeichert');
+      await saveToBackend();
+      // FIX S6: LiveRoom-Sync — wenn aktiv, State an Peers broadcasten
+      if (typeof LiveRoom !== 'undefined' && LiveRoom.peer && LiveRoom.syncEnabled && (LiveRoom.isHost ? LiveRoom.peers.length > 0 : LiveRoom.conn)) {
+        try { LiveRoom.send({ type: 'state-update', data: LiveRoom.getBoardState() }); } catch(_){}
+      }
+    }catch(e){setSaveIndicator('Speicherfehler','#FF453A');}
+  },400);
+}
 function expD(){return{nodes:nodes.map(cN),edges:conns.map(c=>({id:c.id,fromNode:c.from,toNode:c.to,fromSide:c.fromSide,toSide:c.toSide,label:c.label||'',style:c.style||'solid',color:c.color||''}))};}
 function impD(data){nodes=[];conns=[];nc=0;clrS();
 (data.nodes||[]).forEach(nd=>{const n={id:nd.id,type:nd.type||'text',text:nd.text||'Node',x:nd.x!=null?nd.x:100,y:nd.y!=null?nd.y:100,width:nd.width||250,height:nd.height||120,scrollY:0,isSelected:false,locked:nd.locked||false,bg:nd.bg||nd.backgroundColor||C('#2c2c2e','#fff'),textColor:nd.textColor||C('#f5f5f7','#1c1c1e'),border:nd.border||nd.borderColor||C('#48484a','#d1d1d6'),typeData:nd.typeData||(nd.type==='checklist'?{items:[]}:(nd.type==='table'?{headers:['Spalte 1','Spalte 2'],rows:[['','']]}:(nd.type==='link'?{url:'https://',icon:''}:{})))};const num=parseInt(n.id.replace(/\D/g,''));if(!isNaN(num)&&num>nc)nc=num;nodes.push(n);});
@@ -176,10 +190,12 @@ case'hexagon':return{...b,text:text||'Modul',width:180,height:160,bg:C('#2a1e3a'
 case'image':return{...b,text:text||'Bild',width:300,height:200,bg:'transparent',textColor:'transparent',border:C('rgba(255,255,255,0.2)','rgba(0,0,0,0.2)'),typeData:{src:'', url:''}};
 default:return{...b,text:text||'New Node',width:250,height:120,bg:C('#2c2c2e','#fff'),textColor:C('#f5f5f7','#1c1c1e'),border:C('#48484a','#d1d1d6'),typeData:{}};}}
 function cN(n){const{_rh,_sb,_ch,_ms,_ca,isEditing,...r}=n;return r;}
-function addN(type,x,y,text){const n=mN(type,text,snV(x!=null&&x!==''?+x:100),snV(y!=null&&y!==''?+y:100));nodes.push(n);pH();aS();uSB();sR();return n;}
-function delN(n){nodes=nodes.filter(x=>x!==n);conns=conns.filter(c=>c.from!==n.id&&c.to!==n.id);selN=selN.filter(s=>s!==n);if(imgCache[n.id]) delete imgCache[n.id];  // FIX 1: Cleanup imgCache to prevent memory leak
-pH();aS();uSB();sR();}
-function delC(c){conns=conns.filter(x=>x!==c);if(selC===c)selC=null;pH();aS();uSB();sR();}
+// FIX A6: Zentraler Event-Dispatcher für PredictiveWorkflow & LiveRoom-Hooks
+function emit(name,detail){try{document.dispatchEvent(new CustomEvent(name,{detail:detail||{}}));}catch(_){}}
+function addN(type,x,y,text){const n=mN(type,text,snV(x!=null&&x!==''?+x:100),snV(y!=null&&y!==''?+y:100));nodes.push(n);pH();aS();uSB();sR();emit('nodeCreated',{type:n.type,id:n.id});return n;}
+function delN(n){const id=n.id;nodes=nodes.filter(x=>x!==n);conns=conns.filter(c=>c.from!==n.id&&c.to!==n.id);selN=selN.filter(s=>s!==n);if(imgCache[n.id]) delete imgCache[n.id];
+pH();aS();uSB();sR();emit('nodeDeleted',{id});}
+function delC(c){const id=c.id;conns=conns.filter(x=>x!==c);if(selC===c)selC=null;pH();aS();uSB();sR();emit('connectionDeleted',{id});}
 
 function clrS(){nodes.forEach(n=>n.isSelected=false);selN=[];selC=null;}
 function selOne(n){clrS();n.isSelected=true;selN=[n];}
@@ -453,6 +469,31 @@ const inVP=n=>n.x+n.width>vl&&n.x<vr&&n.y+n.height>vt&&n.y<vb;
 nodes.filter(n=>n.type==='group'&&inVP(n)).forEach(n=>drawNode(n));conns.forEach(c=>drawConn(c,selC&&selC.id===c.id));nodes.filter(n=>n.type!=='group'&&inVP(n)).forEach(n=>drawNode(n));
 if(isConn&&cStart){const cp=cStartPt||{x:cStart.x+cStart.width/2,y:cStart.y+cStart.height/2};const mx=(lMX-vx)/vs,my=(lMY-vy)/vs;ctx.strokeStyle='#30D158';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(mx,my);ctx.stroke();ctx.setLineDash([]);}
 if(isSel&&sRect){ctx.fillStyle=C('rgba(0,122,255,0.06)','rgba(0,122,255,0.08)');ctx.fillRect(sRect.x,sRect.y,sRect.w,sRect.h);ctx.strokeStyle='#007AFF';ctx.lineWidth=1/vs;ctx.setLineDash([4/vs,3/vs]);ctx.strokeRect(sRect.x,sRect.y,sRect.w,sRect.h);ctx.setLineDash([]);}
+// FIX S7: Remote-Cursor zeichnen (in Welt-Koordinaten, im transformierten Context)
+if(typeof LiveRoom!=='undefined'&&LiveRoom.remoteCursors){
+  const cursors=Object.entries(LiveRoom.remoteCursors);
+  if(cursors.length){
+    const r=8/vs,labelOff=14/vs;
+    ctx.font=`${Math.max(10,11/vs)}px ${FB}`;
+    cursors.forEach(([id,c])=>{
+      // Pfeil-Cursor (Dreieck)
+      ctx.fillStyle=c.color;ctx.strokeStyle='#fff';ctx.lineWidth=1.5/vs;
+      ctx.beginPath();
+      ctx.moveTo(c.x,c.y);
+      ctx.lineTo(c.x+r*1.6,c.y+r*0.8);
+      ctx.lineTo(c.x+r*0.8,c.y+r*0.9);
+      ctx.lineTo(c.x+r*0.5,c.y+r*1.7);
+      ctx.closePath();ctx.fill();ctx.stroke();
+      // Name-Label
+      const txt=c.name||'peer';
+      const padX=4/vs,padY=2/vs,tw=ctx.measureText(txt).width;
+      ctx.fillStyle=c.color;
+      rR(c.x+labelOff,c.y+labelOff,tw+padX*2,12/vs+padY*2,3/vs);ctx.fill();
+      ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';
+      ctx.fillText(txt,c.x+labelOff+padX,c.y+labelOff+(12/vs+padY*2)/2);
+    });
+  }
+}
 ctx.restore();uSB();}
 
 function renderMM(){const mw=180,mh=120;mmC.width=mw;mmC.height=mh;mmX.clearRect(0,0,mw,mh);mmX.fillStyle=C('rgba(28,28,30,0.95)','rgba(242,242,247,0.95)');mmX.fillRect(0,0,mw,mh);
@@ -672,10 +713,10 @@ document.addEventListener('mouseup',e=>{if(window.PointerEvent)return;
 if(isRz){isRz=false;if(rzN){pH();aS();}rzN=null;rzH=null;sR();return;}
 if(isSB){isSB=false;sbN=null;sR();return;}
 if(isConn&&cStart){const r=canvas.getBoundingClientRect();const{x:cx,y:cy}=s2c(e.clientX-r.left,e.clientY-r.top);const target=nAt(cx,cy);
-if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();}
+if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();emit('connectionCreated',{from:cStart.id,to:target.id});}
 isConn=false;cStart=null;cStartPt=null;setCursor('default');}
 if(isSel){if(sRect&&(sRect.w>4||sRect.h>4)){const sel=nInR(sRect.x,sRect.y,sRect.w,sRect.h);if(e.ctrlKey||e.metaKey||e.shiftKey)sel.forEach(n=>addS(n));else{clrS();sel.forEach(n=>addS(n));}}isSel=false;sRect=null;}
-if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();}
+if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();emit('nodeMoved',{count:selN.length});}
 // P2P Share: Drag-Daten nach erfolgreichem Drag zurücksetzen
 isDrag=false;isND=false;isPan=false;dNode=null;moved=false;sR();});
 
@@ -719,6 +760,15 @@ if(node.isSelected&&!node.locked){isND=true;dNode=node;dOX=cx-node.x;dOY=cy-node
 }
 lMX=mx;lMY=my;isDrag=true;moved=false;sR();});
 
+// FIX S7: Cursor-Broadcast (immer aktiv, unabhängig von Drag-State)
+canvas.addEventListener('pointermove',e=>{
+  if(typeof LiveRoom!=='undefined'&&LiveRoom.peer){
+    const{mx,my}=getLocalPoint(e);
+    const{x:cx,y:cy}=s2c(mx,my);
+    LiveRoom.sendCursor(cx,cy);
+  }
+},{passive:true});
+
 canvas.addEventListener('pointermove',e=>{if(!window.PointerEvent||activePointerId!==e.pointerId)return;const{mx,my}=getLocalPoint(e);const{x:cx,y:cy}=s2c(mx,my);
 hNode=nAt(cx,cy);hCP=hNode?cpAt(hNode,cx,cy):null;
 if(isRz)setCursor(rzH.cursor);else if(isSB)setCursor('ns-resize');else if(isConn)setCursor('crosshair');else if(hCP&&e.shiftKey)setCursor('copy');else if(hNode){const rh=hNode._rh?.find(h=>cx>=h.x&&cx<=h.x+h.w&&cy>=h.y&&cy<=h.y+h.h);setCursor(rh?rh.cursor:(hNode.locked?'not-allowed':'grab'));}else setCursor('default');
@@ -728,10 +778,10 @@ canvas.addEventListener('pointerup',e=>{if(!window.PointerEvent||activePointerId
 if(isRz){isRz=false;if(rzN){pH();aS();}rzN=null;rzH=null;activePointerId=null;sR();return;}
 if(isSB){isSB=false;sbN=null;activePointerId=null;sR();return;}
 if(isConn&&cStart){const{mx,my}=getLocalPoint(e);const{x:cx,y:cy}=s2c(mx,my);const target=nAt(cx,cy);
-if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();}
+if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();emit('connectionCreated',{from:cStart.id,to:target.id});}
 isConn=false;cStart=null;cStartPt=null;setCursor('default');}
 if(isSel){if(sRect&&(sRect.w>4||sRect.h>4)){const sel=nInR(sRect.x,sRect.y,sRect.w,sRect.h);if(e.ctrlKey||e.metaKey||e.shiftKey)sel.forEach(n=>addS(n));else{clrS();sel.forEach(n=>addS(n));}}isSel=false;sRect=null;}
-if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();}
+if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();emit('nodeMoved',{count:selN.length});}
 isDrag=false;isND=false;isPan=false;dNode=null;moved=false;activePointerId=null;try{canvas.releasePointerCapture(e.pointerId);}catch(_){ }sR();});
 
 canvas.addEventListener('pointercancel',resetInteractionState);
@@ -949,6 +999,7 @@ document.getElementById('btn-snap').onclick=()=>{snap=!snap;document.getElementB
 document.getElementById('btn-fit').onclick=fitAll;document.getElementById('btn-search').onclick=openSP;document.getElementById('btn-tpl').onclick=openTPL;document.getElementById('btn-png').onclick=expPNG;
 {const _svg=document.getElementById('btn-svg');if(_svg)_svg.onclick=expSVG;}
 {const _help=document.getElementById('btn-help');if(_help)_help.onclick=openHelp;}
+{const _mac=document.getElementById('btn-macros');if(_mac)_mac.onclick=()=>{if(typeof PredictiveWorkflow!=='undefined')PredictiveWorkflow.openMacroPanel();};}
 {const _hc=document.getElementById('help-close');if(_hc)_hc.onclick=closeHelp;}
 {const _hm=document.getElementById('help-modal');if(_hm)_hm.addEventListener('mousedown',e=>{if(e.target===_hm)closeHelp();});}
 document.getElementById('btn-export').onclick=()=>{const b=new Blob([JSON.stringify(expD(),null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='canvas-'+Date.now()+'.json';a.click();URL.revokeObjectURL(u);toast('JSON ↓');};
@@ -1214,64 +1265,196 @@ const AIOrganizer = {
     return nodes.filter(n => !connectedIds.has(n.id));
   },
   
-  // Duplikat-Erkennung: Findet Nodes mit identischem Text/Inhalt
+  // FIX A3: Duplicate Detection mit Fuzzy-Matching (Levenshtein-basiert)
   findDuplicates() {
-    const textMap = new Map();
+    // Schritt 1: Normalisierung (Umlaute, Whitespace, Punktuation)
+    const norm = s => (s || '').toLowerCase()
+      .replace(/[äÄ]/g,'a').replace(/[öÖ]/g,'o').replace(/[üÜ]/g,'u').replace(/[ß]/g,'ss')
+      .replace(/[^\p{L}\p{N}\s]/gu,' ')
+      .replace(/\s+/g,' ').trim();
+
+    // Schritt 2: Exakte Duplikate sammeln
+    const exactMap = new Map();
+    const candidates = [];
     nodes.forEach(n => {
-      const key = (n.text || '').trim().toLowerCase();
-      if (key && key.length > 3) { // Nur relevante Texte
-        if (!textMap.has(key)) textMap.set(key, []);
-        textMap.get(key).push(n);
+      const key = norm(n.text);
+      if (!key || key.length < 4) return;
+      candidates.push({ node: n, key });
+      if (!exactMap.has(key)) exactMap.set(key, []);
+      exactMap.get(key).push(n);
+    });
+
+    const duplicates = [];
+    const usedIds = new Set();
+    exactMap.forEach((arr, text) => {
+      if (arr.length > 1) {
+        duplicates.push({ text, nodes: arr, similarity: 1.0 });
+        arr.forEach(n => usedIds.add(n.id));
       }
     });
-    
-    const duplicates = [];
-    textMap.forEach((nodesArr, text) => {
-      if (nodesArr.length > 1) duplicates.push({ text, nodes: nodesArr });
+
+    // Schritt 3: Fuzzy-Pairs für Nodes, die noch nicht in exakter Gruppe sind
+    const remaining = candidates.filter(c => !usedIds.has(c.node.id));
+    const THRESHOLD = 0.82; // 82% Ähnlichkeit
+
+    // Levenshtein-Distanz (klassische DP, früh abbrechen bei großen Strings)
+    const lev = (a, b) => {
+      if (a === b) return 0;
+      if (!a.length) return b.length;
+      if (!b.length) return a.length;
+      // Performance-Schutz: zu unterschiedlich → skip
+      if (Math.abs(a.length - b.length) > Math.max(a.length, b.length) * 0.5) return Math.max(a.length, b.length);
+      let prev = Array(b.length + 1);
+      for (let j = 0; j <= b.length; j++) prev[j] = j;
+      for (let i = 1; i <= a.length; i++) {
+        const cur = [i];
+        for (let j = 1; j <= b.length; j++) {
+          const cost = a.charCodeAt(i-1) === b.charCodeAt(j-1) ? 0 : 1;
+          cur[j] = Math.min(cur[j-1] + 1, prev[j] + 1, prev[j-1] + cost);
+        }
+        prev = cur;
+      }
+      return prev[b.length];
+    };
+    const similarity = (a, b) => {
+      const d = lev(a, b);
+      return 1 - d / Math.max(a.length, b.length, 1);
+    };
+
+    // Schritt 4: Union-Find für fuzzy Gruppen
+    const parent = {};
+    remaining.forEach(c => parent[c.node.id] = c.node.id);
+    const find = id => parent[id] === id ? id : (parent[id] = find(parent[id]));
+    const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; };
+
+    for (let i = 0; i < remaining.length; i++) {
+      for (let j = i + 1; j < remaining.length; j++) {
+        const sim = similarity(remaining[i].key, remaining[j].key);
+        if (sim >= THRESHOLD) union(remaining[i].node.id, remaining[j].node.id);
+      }
+    }
+
+    // Schritt 5: Cluster nach Root sammeln
+    const fuzzyClusters = {};
+    remaining.forEach(c => {
+      const r = find(c.node.id);
+      if (!fuzzyClusters[r]) fuzzyClusters[r] = [];
+      fuzzyClusters[r].push(c);
     });
-    
+
+    Object.values(fuzzyClusters).forEach(group => {
+      if (group.length > 1) {
+        const repr = group.reduce((a, b) => a.key.length <= b.key.length ? a : b);
+        duplicates.push({
+          text: '≈ ' + repr.node.text,
+          nodes: group.map(g => g.node),
+          similarity: Math.round(group.reduce((s, g) => s + similarity(repr.key, g.key), 0) / group.length * 100) / 100
+        });
+      }
+    });
+
     return duplicates;
   },
   
-  // Auto-Layout: Berechnet optimierte Positionen (Force-Directed light)
+  // FIX A2: Echtes Force-Directed Layout (Fruchterman-Reingold-light)
+  // Repulsive Kraft zwischen allen Nodes + attraktive Kraft entlang Connections
   calculateAutoLayout() {
+    if (!nodes.length) return {};
     const positions = {};
-    const clusters = this.findClusters();
-    let offsetX = 100, offsetY = 100;
-    const clusterGap = 400;
-    const nodeGapX = 280;
-    const nodeGapY = 200;
-    
-    clusters.forEach((cluster, cIdx) => {
-      const cols = Math.ceil(Math.sqrt(cluster.length));
-      const rows = Math.ceil(cluster.length / cols);
-      
-      cluster.forEach((node, idx) => {
-        const col = idx % cols;
-        const row = Math.floor(idx / cols);
-        positions[node.id] = {
-          x: offsetX + col * nodeGapX,
-          y: offsetY + row * nodeGapY
-        };
-      });
-      
-      offsetX += cols * nodeGapX + clusterGap;
-      if (offsetX > window.innerWidth - 200) {
-        offsetX = 100;
-        offsetY += rows * nodeGapY + clusterGap;
-      }
-    });
-    
-    // Einzelne Nodes (Orphans) am Ende anordnen
-    const orphans = this.findOrphans();
-    orphans.forEach((node, idx) => {
-      positions[node.id] = {
-        x: 100 + (idx % 5) * 280,
-        y: offsetY + 100 + Math.floor(idx / 5) * 200
+    const N = nodes.length;
+
+    // Start: aktuelle Positionen übernehmen (kleine Jitter, falls überlappend)
+    nodes.forEach(n => {
+      positions[n.id] = {
+        x: n.x + (Math.random() - 0.5) * 2,
+        y: n.y + (Math.random() - 0.5) * 2,
+        w: n.width || 200,
+        h: n.height || 120
       };
     });
-    
-    return positions;
+
+    // Parameter: skaliert mit Anzahl Nodes
+    const area = Math.max(800 * 600, N * 250 * 200);
+    const k = Math.sqrt(area / N);          // ideale Kantenlänge
+    const repulseK = k * k * 1.4;            // Repulsions-Stärke
+    const attractK = 1 / k;                  // Attraktions-Faktor
+    const iterations = Math.min(200, 60 + N * 2);
+    let temperature = k * 0.6;               // anfängliche Bewegungs-Obergrenze
+    const cooling = temperature / iterations;
+
+    // Adjazenz (für Connections)
+    const edges = conns.map(c => [c.from, c.to]).filter(([a,b]) => positions[a] && positions[b]);
+
+    for (let iter = 0; iter < iterations; iter++) {
+      // Verschiebungen pro Node sammeln
+      const disp = {};
+      nodes.forEach(n => disp[n.id] = { x: 0, y: 0 });
+
+      // Repulsion: alle Paare abstoßen, abhängig vom Abstand der Mittelpunkte
+      for (let i = 0; i < N; i++) {
+        const a = nodes[i], pa = positions[a.id];
+        const ax = pa.x + pa.w / 2, ay = pa.y + pa.h / 2;
+        for (let j = i + 1; j < N; j++) {
+          const b = nodes[j], pb = positions[b.id];
+          const bx = pb.x + pb.w / 2, by = pb.y + pb.h / 2;
+          let dx = ax - bx, dy = ay - by;
+          let dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 0.01) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; dist = 0.5; }
+          // Minimum-Abstand basierend auf Boxgrößen (verhindert Überlappung)
+          const minDist = (Math.max(pa.w, pb.w) + Math.max(pa.h, pb.h)) / 2 + 40;
+          const effectiveDist = Math.max(dist, minDist * 0.3);
+          const force = repulseK / effectiveDist;
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          disp[a.id].x += fx; disp[a.id].y += fy;
+          disp[b.id].x -= fx; disp[b.id].y -= fy;
+        }
+      }
+
+      // Attraktion entlang Kanten
+      edges.forEach(([fromId, toId]) => {
+        const pa = positions[fromId], pb = positions[toId];
+        const ax = pa.x + pa.w / 2, ay = pa.y + pa.h / 2;
+        const bx = pb.x + pb.w / 2, by = pb.y + pb.h / 2;
+        const dx = ax - bx, dy = ay - by;
+        const dist = Math.max(0.01, Math.sqrt(dx*dx + dy*dy));
+        const force = (dist * dist) * attractK;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        disp[fromId].x -= fx; disp[fromId].y -= fy;
+        disp[toId].x   += fx; disp[toId].y   += fy;
+      });
+
+      // Anwenden mit Temperature-Limit
+      nodes.forEach(n => {
+        if (n.locked) return;
+        const d = disp[n.id];
+        const dispLen = Math.sqrt(d.x*d.x + d.y*d.y) || 0.01;
+        const limited = Math.min(dispLen, temperature);
+        positions[n.id].x += (d.x / dispLen) * limited;
+        positions[n.id].y += (d.y / dispLen) * limited;
+      });
+
+      temperature = Math.max(0.1, temperature - cooling);
+    }
+
+    // Resultat aufräumen — Center auf Viewport-Mitte verschieben
+    let mX = Infinity, mY = Infinity, MX = -Infinity, MY = -Infinity;
+    nodes.forEach(n => {
+      const p = positions[n.id];
+      mX = Math.min(mX, p.x); mY = Math.min(mY, p.y);
+      MX = Math.max(MX, p.x + p.w); MY = Math.max(MY, p.y + p.h);
+    });
+    const cssW = canvas.width / (window.devicePixelRatio || 1);
+    const cssH = canvas.height / (window.devicePixelRatio || 1);
+    const targetCX = (cssW / 2 - vx) / vs;
+    const targetCY = (cssH / 2 - vy) / vs;
+    const shiftX = targetCX - (mX + MX) / 2;
+    const shiftY = targetCY - (mY + MY) / 2;
+
+    const out = {};
+    nodes.forEach(n => { out[n.id] = { x: positions[n.id].x + shiftX, y: positions[n.id].y + shiftY }; });
+    return out;
   },
   
   // UI Renderer für Ergebnisse
@@ -1286,16 +1469,35 @@ const AIOrganizer = {
         return;
       }
       
+      // XSS-Schutz + Per-Cluster Auswählen
       clusters.forEach((cluster, idx) => {
         const item = document.createElement('div');
         item.style.cssText = 'padding:12px;margin-bottom:8px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--glass-border);';
+        const preview = cluster.slice(0, 5).map(n => escapeHtml((n.text||'').substring(0, 30))).join(' · ');
         item.innerHTML = `
-          <div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:6px;">Cluster ${idx + 1} (${cluster.length} Nodes)</div>
-          <div style="font-size:11px;color:var(--text3);">${cluster.slice(0, 5).map(n => n.text.substring(0, 30)).join(' · ')}${cluster.length > 5 ? ' ...' : ''}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="font-weight:600;font-size:12px;color:var(--text);">Cluster ${idx + 1} (${cluster.length} Nodes)</div>
+            <button class="cluster-select-btn" data-idx="${idx}" style="padding:4px 10px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:10px;cursor:pointer;font-family:var(--font);">Auswählen</button>
+          </div>
+          <div style="font-size:11px;color:var(--text3);">${preview}${cluster.length > 5 ? ' …' : ''}</div>
         `;
         $aiResultsList.appendChild(item);
       });
-      
+
+      setTimeout(() => {
+        document.querySelectorAll('.cluster-select-btn').forEach(btn => {
+          btn.onclick = () => {
+            const cluster = clusters[parseInt(btn.dataset.idx, 10)];
+            if (!cluster) return;
+            clrS();
+            cluster.forEach(n => addS(n));
+            sR();
+            toast(`✓ ${cluster.length} Nodes selektiert`);
+            $aiPicker.style.display = 'none';
+          };
+        });
+      }, 0);
+
       const btn = document.createElement('button');
       btn.textContent = 'Cluster als Gruppen organisieren';
       btn.style.cssText = 'padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:var(--font);';
@@ -1312,9 +1514,10 @@ const AIOrganizer = {
       orphans.forEach(node => {
         const item = document.createElement('div');
         item.style.cssText = 'padding:10px;margin-bottom:6px;border-radius:6px;background:var(--accent-soft);display:flex;justify-content:space-between;align-items:center;';
+        const safeText = escapeHtml((node.text || '').substring(0, 40));
         item.innerHTML = `
-          <span style="font-size:12px;color:var(--text);">${node.text.substring(0, 40)}${node.text.length > 40 ? '...' : ''}</span>
-          <button class="ai-highlight-btn" data-id="${node.id}" style="padding:4px 10px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:10px;cursor:pointer;font-family:var(--font);">Highlight</button>
+          <span style="font-size:12px;color:var(--text);">${safeText}${(node.text||'').length > 40 ? '…' : ''}</span>
+          <button class="ai-highlight-btn" data-id="${escapeHtml(node.id)}" style="padding:4px 10px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:10px;cursor:pointer;font-family:var(--font);">Highlight</button>
         `;
         $aiResultsList.appendChild(item);
       });
@@ -1342,17 +1545,57 @@ const AIOrganizer = {
         $aiResultsList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--green);font-size:13px;">Keine Duplikate gefunden!</div>';
         return;
       }
-      
+
+      // FIX A3: Similarity-Anzeige + Aktions-Buttons (Auswählen, Erstes behalten)
       duplicates.forEach((dup, idx) => {
         const item = document.createElement('div');
         item.style.cssText = 'padding:12px;margin-bottom:8px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--glass-border);';
+        const simPct = Math.round((dup.similarity || 1) * 100);
+        const isFuzzy = simPct < 100;
         item.innerHTML = `
-          <div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:6px;">"${dup.text.substring(0, 40)}${dup.text.length > 40 ? '...' : ''}" (${dup.nodes.length}x)</div>
-          <div style="font-size:11px;color:var(--text3);">Positionen: ${dup.nodes.map(n => `(${Math.round(n.x)},${Math.round(n.y)})`).join(' · ')}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;">
+            <div style="font-weight:600;font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">"${escapeHtml(dup.text.substring(0, 50))}${dup.text.length > 50 ? '…' : ''}"</div>
+            <div style="font-size:10px;color:${isFuzzy ? 'var(--text3)' : 'var(--green)'};font-weight:600;white-space:nowrap;">${dup.nodes.length}× · ${simPct}%</div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Positionen: ${dup.nodes.map(n => `(${Math.round(n.x)},${Math.round(n.y)})`).join(' · ')}</div>
+          <div style="display:flex;gap:6px;">
+            <button class="dup-select-btn" data-idx="${idx}" style="flex:1;padding:5px 8px;border-radius:5px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:10px;cursor:pointer;font-family:var(--font);font-weight:500;">Auswählen</button>
+            <button class="dup-keepfirst-btn" data-idx="${idx}" style="flex:1;padding:5px 8px;border-radius:5px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:10px;cursor:pointer;font-family:var(--font);font-weight:500;">Erstes behalten</button>
+          </div>
         `;
         $aiResultsList.appendChild(item);
       });
-      
+
+      // Handler nach DOM-Insertion verkabeln
+      setTimeout(() => {
+        document.querySelectorAll('.dup-select-btn').forEach(btn => {
+          btn.onclick = () => {
+            const idx = parseInt(btn.dataset.idx, 10);
+            const group = duplicates[idx];
+            if (!group) return;
+            clrS();
+            group.nodes.forEach(n => addS(n));
+            sR();
+            toast(`✓ ${group.nodes.length} Nodes selektiert`);
+            $aiPicker.style.display = 'none';
+          };
+        });
+        document.querySelectorAll('.dup-keepfirst-btn').forEach(btn => {
+          btn.onclick = () => {
+            const idx = parseInt(btn.dataset.idx, 10);
+            const group = duplicates[idx];
+            if (!group || group.nodes.length < 2) return;
+            if (!confirm(`${group.nodes.length - 1} Duplikat(e) löschen, erstes behalten?`)) return;
+            const toDelete = group.nodes.slice(1);
+            toDelete.forEach(n => delN(n));
+            toast(`🗑 ${toDelete.length} Duplikat(e) gelöscht`);
+            // Liste neu rendern, ohne das ganze Modal zu schließen
+            const fresh = AIOrganizer.findDuplicates();
+            AIOrganizer.renderResults('duplicates', fresh);
+          };
+        });
+      }, 0);
+
     } else if (action === 'layout') {
       const positions = results;
       $aiResultsList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Bereite Auto-Layout vor...<br><br>Dies wird alle Nodes neu positionieren, um Kreuzungen zu minimieren und die Lesbarkeit zu verbessern.</div>';
@@ -1372,12 +1615,72 @@ const AIOrganizer = {
     }
   },
   
-  // Aktionen anwenden
+  // FIX A1: Cluster werden räumlich gruppiert + optional in Group-Container verpackt
   applyClustering(clusters) {
-    pH(); // History Punkt
+    if (!clusters || !clusters.length) { toast('Keine Cluster'); return; }
+    pH();
+    const pad = 60, gap = 24, clusterGap = 180;
+    // Aktuelle Position des "globalen Schwerpunkts" als Startpunkt
+    let sx = nodes.reduce((s,n)=>s+n.x,0)/Math.max(1,nodes.length);
+    let sy = nodes.reduce((s,n)=>s+n.y,0)/Math.max(1,nodes.length);
+    let cursorX = sx - 600, cursorY = sy - 400;
+    let rowMaxH = 0;
+
+    clusters.forEach((cluster, ci) => {
+      // Nodes nach Verbindungsgrad sortieren (zentrale Nodes oben links)
+      const deg = {};
+      cluster.forEach(n => { deg[n.id] = conns.filter(c => c.from === n.id || c.to === n.id).length; });
+      const sorted = cluster.slice().sort((a,b) => (deg[b.id]||0) - (deg[a.id]||0));
+
+      const cols = Math.ceil(Math.sqrt(sorted.length));
+      const maxW = Math.max(...sorted.map(n => n.width));
+      const maxH = Math.max(...sorted.map(n => n.height));
+      const cellW = maxW + gap, cellH = maxH + gap;
+      const rows = Math.ceil(sorted.length / cols);
+      const blockW = cols * cellW + pad * 2;
+      const blockH = rows * cellH + pad * 2;
+
+      // Zeilenumbruch wenn nicht mehr in den "Streifen" passt
+      if (cursorX + blockW > sx + 1200) {
+        cursorX = sx - 600;
+        cursorY += rowMaxH + clusterGap;
+        rowMaxH = 0;
+      }
+
+      // Nodes neu positionieren
+      sorted.forEach((n, i) => {
+        if (n.locked) return;
+        const col = i % cols, row = Math.floor(i / cols);
+        n.x = snV(cursorX + pad + col * cellW);
+        n.y = snV(cursorY + pad + row * cellH);
+      });
+
+      // Group-Container um Cluster legen
+      const groupId = 'n' + (++nc);
+      nodes.unshift({
+        id: groupId,
+        type: 'group',
+        text: `Cluster ${ci + 1}`,
+        x: snV(cursorX),
+        y: snV(cursorY),
+        width: blockW,
+        height: blockH,
+        scrollY: 0,
+        isSelected: false,
+        locked: false,
+        bg: C('rgba(0,122,255,0.04)','rgba(0,122,255,0.04)'),
+        textColor: C('rgba(0,122,255,0.85)','rgba(0,85,204,0.85)'),
+        border: C('rgba(0,122,255,0.35)','rgba(0,122,255,0.35)'),
+        typeData: {}
+      });
+
+      cursorX += blockW + clusterGap;
+      rowMaxH = Math.max(rowMaxH, blockH);
+    });
+
+    aS(); uSB(); sR();
     toast(`📦 ${clusters.length} Cluster organisiert`);
     $aiPicker.style.display = 'none';
-    aS();
   },
   
   applyAutoLayout(positions) {
@@ -1583,74 +1886,133 @@ const InteropBridge = {
           }
         });
       } else if (format === 'mermaid') {
-        // Mermaid Parser
+        // FIX B3: Robusterer Mermaid-Parser mit Shape-Erkennung & Labels
         importedData = { nodes: [], connections: [] };
         const nodeMap = {};
         let nodeIndex = 0;
-        
-        const nodeLines = inputData.match(/(\w+)\[(.+?)\]/g) || [];
-        nodeLines.forEach(line => {
-          const match = line.match(/(\w+)\[(.+?)\]/);
-          if (match) {
-            const nodeId = `imp-${Date.now()}-${nodeIndex++}`;
-            nodeMap[match[1]] = nodeId;
-            importedData.nodes.push({
-              id: nodeId,
-              text: match[2],
-              type: 'idea',
-              x: Math.random() * 800,
-              y: Math.random() * 600,
-              color: '#ffffff'
-            });
+        // Shape-Klammern → Node-Typ mapping
+        // [text]=text, (text)=ellipse, {text}=diamond, [[text]]=hexagon, ((text))=link
+        // ID darf Buchstaben/Ziffern/Underscore/Bindestrich enthalten
+        const shapePatterns = [
+          { rx: /\b([A-Za-z0-9_-]+)\(\(([^)]+)\)\)/g, type: 'link' },
+          { rx: /\b([A-Za-z0-9_-]+)\[\[([^\]]+)\]\]/g, type: 'hexagon' },
+          { rx: /\b([A-Za-z0-9_-]+)\{([^}]+)\}/g,     type: 'diamond' },
+          { rx: /\b([A-Za-z0-9_-]+)\(([^)]+)\)/g,     type: 'ellipse' },
+          { rx: /\b([A-Za-z0-9_-]+)\[([^\]]+)\]/g,    type: 'text' },
+        ];
+        const addNodeIfNew = (origId, text, type) => {
+          if (nodeMap[origId]) return;
+          const newId = `imp-${Date.now()}-${nodeIndex++}`;
+          nodeMap[origId] = newId;
+          importedData.nodes.push({ id: newId, text: text.trim(), type });
+        };
+        shapePatterns.forEach(({rx, type}) => {
+          let m;
+          while ((m = rx.exec(inputData)) !== null) {
+            addNodeIfNew(m[1], m[2], type);
           }
         });
-        
-        const connLines = inputData.match(/(\w+)\s+-->.*?\s+(\w+)/g) || [];
-        connLines.forEach(line => {
-          const parts = line.split('-->');
-          if (parts.length >= 2) {
-            const fromId = parts[0].trim();
-            const toPart = parts[1].trim();
-            const toId = toPart.match(/^\|.*?\|\s*(\w+)/)?.[1] || toPart.match(/(\w+)$/)?.[1];
-            
-            if (fromId && toId && nodeMap[fromId] && nodeMap[toId]) {
-              importedData.connections.push({
-                from: nodeMap[fromId],
-                to: nodeMap[toId],
-                label: ''
-              });
-            }
-          }
-        });
+
+        // Connections: A --> B, A -->|label| B, A --- B, A -.-> B, A ==> B
+        // Erlaubt auch IDs mit Shape-Suffix: A[Foo] --> B[Bar] — Shapes wurden oben schon erfasst
+        const connRx = /([A-Za-z0-9_-]+)(?:\[[^\]]+\]|\([^)]+\)|\{[^}]+\}|\[\[[^\]]+\]\]|\(\([^)]+\)\))?\s*(?:--|==|-\.|-\.-)+>?\s*(?:\|([^|]+)\|)?\s*([A-Za-z0-9_-]+)/g;
+        let cm;
+        while ((cm = connRx.exec(inputData)) !== null) {
+          const from = cm[1], label = (cm[2] || '').trim(), to = cm[3];
+          // Wenn IDs in keinem Shape-Block auftauchten, als 'text' anlegen
+          if (!nodeMap[from]) addNodeIfNew(from, from, 'text');
+          if (!nodeMap[to])   addNodeIfNew(to,   to,   'text');
+          importedData.connections.push({
+            from: nodeMap[from],
+            to: nodeMap[to],
+            label: label
+          });
+        }
+      } else if (format === 'csv') {
+        // FIX B4-light: einfacher CSV-Import (Header-Zeile: ID,Text,Type,X,Y)
+        importedData = { nodes: [], connections: [] };
+        const lines = inputData.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) throw new Error('CSV zu kurz (Header + Daten erwartet)');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g,''));
+        const idx = { id: headers.indexOf('id'), text: headers.indexOf('text'), type: headers.indexOf('type'), x: headers.indexOf('x'), y: headers.indexOf('y') };
+        for (let i = 1; i < lines.length; i++) {
+          // Sehr einfacher CSV-Parser (unterstützt "..."-Quoting)
+          const cells = lines[i].match(/("([^"]|"")*"|[^,]+)/g) || [];
+          const clean = cells.map(c => c.replace(/^"|"$/g,'').replace(/""/g,'"'));
+          importedData.nodes.push({
+            id: idx.id   >= 0 ? clean[idx.id]   : `csv-${i}`,
+            text: idx.text >= 0 ? clean[idx.text] : '',
+            type: idx.type >= 0 ? clean[idx.type] : 'text',
+            x: idx.x !== -1 ? parseFloat(clean[idx.x]) : undefined,
+            y: idx.y !== -1 ? parseFloat(clean[idx.y]) : undefined,
+          });
+        }
       }
       
       if (importedData && importedData.nodes) {
         pH(); // History Punkt
-        importedData.nodes.forEach(n => {
-          nodes.push({
-            id: n.id || `imp-${Date.now()}-${Math.random()}`,
-            text: n.text || 'Importierter Node',
-            x: snV(n.x || Math.random() * 500),
-            y: snV(n.y || Math.random() * 500),
-            width: 240,
-            height: 140,
-            type: n.type || 'note',
-            color: n.color || '#ffffff',
-            items: n.items || []
-          });
+
+        // FIX B1: Valide Node-Typen + ID-Mapping für Connections
+        const validTypes = new Set(['text','sticky','checklist','group','table','link','diamond','ellipse','hexagon','image']);
+        const typeAlias = { note:'text', idea:'text', task:'checklist', card:'text', '': 'text' };
+        const idMap = {};
+
+        // Viewport-Zentrum (falls keine Positionen vorhanden)
+        const cssW = canvas.width / (window.devicePixelRatio || 1);
+        const cssH = canvas.height / (window.devicePixelRatio || 1);
+        const vcx = (cssW / 2 - vx) / vs;
+        const vcy = (cssH / 2 - vy) / vs;
+        let posCounter = 0;
+
+        importedData.nodes.forEach((n, idx) => {
+          let t = (n.type || '').toLowerCase();
+          if (typeAlias[t]) t = typeAlias[t];
+          if (!validTypes.has(t)) t = 'text';
+
+          // Position: nutze gegebene, sonst Spiral um Viewport-Mitte
+          let nx, ny;
+          if (typeof n.x === 'number' && typeof n.y === 'number') {
+            nx = n.x; ny = n.y;
+          } else {
+            const a = posCounter++ * 0.6, r = 60 + posCounter * 30;
+            nx = vcx + Math.cos(a) * r; ny = vcy + Math.sin(a) * r;
+          }
+
+          // Basis-Node über mN() für korrekte Defaults (bg, textColor, border, typeData)
+          const base = mN(t, n.text || 'Importierter Node', snV(nx), snV(ny));
+          if (n.width)  base.width  = n.width;
+          if (n.height) base.height = n.height;
+          if (n.bg)        base.bg = n.bg;
+          if (n.textColor) base.textColor = n.textColor;
+          if (n.border)    base.border = n.border;
+          if (n.typeData)  base.typeData = n.typeData;
+          else if (n.items && t === 'checklist') base.typeData = { items: n.items };
+          if (typeof n.locked === 'boolean') base.locked = n.locked;
+
+          if (n.id) idMap[n.id] = base.id;
+          nodes.push(base);
         });
-        
-        if (importedData.connections) {
-          importedData.connections.forEach(c => {
+
+        const importedConns = importedData.connections || importedData.conns || importedData.edges || [];
+        importedConns.forEach(c => {
+          const fromId = idMap[c.from || c.fromNode] || c.from;
+          const toId   = idMap[c.to   || c.toNode]   || c.to;
+          // Nur Connections übernehmen, deren Endpunkte existieren
+          if (fromId && toId && nodes.find(n=>n.id===fromId) && nodes.find(n=>n.id===toId)) {
             conns.push({
-              id: `conn-${Date.now()}-${Math.random()}`,
-              from: c.from,
-              to: c.to,
-              label: c.label || ''
+              id: 'c' + Date.now() + Math.random().toString(36).slice(2,6),
+              from: fromId,
+              to: toId,
+              fromSide: c.fromSide || 'right',
+              toSide: c.toSide || 'left',
+              label: c.label || '',
+              style: c.style || 'solid',
+              color: c.color || ''
             });
-          });
-        }
-        
+          }
+        });
+
+        uSB();
         sR();
         aS();
         toast(`✅ ${importedData.nodes.length} Nodes importiert`);
@@ -1946,12 +2308,17 @@ document.getElementById('btn-import-clipboard').onclick = async () => {
     
     // Format automatisch erkennen
     let format = 'json';
-    if (content.trim().startsWith('graph')) {
+    const trimmed = content.trim();
+    if (/^graph\s+(TD|TB|BT|LR|RL)/i.test(trimmed) || /^flowchart\s+/i.test(trimmed)) {
       format = 'mermaid';
+    } else if (/^id\s*,/i.test(trimmed) || /^"?id"?\s*,/i.test(trimmed)) {
+      format = 'csv';
+    } else if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      format = 'json';
     } else if (content.includes('#') && content.includes('##')) {
       format = 'markdown';
     }
-    
+
     const result = await InteropBridge.importFromFormat(format, content);
     if (result.success) {
       $interopPicker.style.display = 'none';
@@ -1960,6 +2327,65 @@ document.getElementById('btn-import-clipboard').onclick = async () => {
     toast('❌ Zugriff auf Zwischenablage nicht möglich');
   }
 };
+
+// FIX B5: Webhook-UI verkabeln (URL speichern, testen)
+(function setupWebhookUI(){
+  const $url = document.getElementById('webhook-url-input');
+  const $save = document.getElementById('webhook-save-btn');
+  const $test = document.getElementById('webhook-test-btn');
+  const $status = document.getElementById('webhook-status');
+  if (!$url || !$save || !$test) return;
+
+  // Vorherigen Wert aus Storage laden
+  $url.value = StorageManager.get('ic_webhook_url') || '';
+
+  const showStatus = (msg, color) => {
+    $status.style.display = 'block';
+    $status.textContent = msg;
+    $status.style.color = color || 'var(--text3)';
+  };
+
+  $save.onclick = () => {
+    const url = $url.value.trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      showStatus('❌ URL muss mit http(s):// beginnen', 'var(--red)');
+      return;
+    }
+    StorageManager.set('ic_webhook_url', url);
+    showStatus(url ? '✅ Webhook gespeichert' : 'Webhook entfernt', 'var(--green)');
+    toast(url ? '💾 Webhook gespeichert' : '🗑 Webhook entfernt');
+  };
+
+  $test.onclick = async () => {
+    const url = $url.value.trim();
+    if (!url) { showStatus('❌ URL eingeben', 'var(--red)'); return; }
+    if (!/^https?:\/\//i.test(url)) { showStatus('❌ URL muss mit http(s):// beginnen', 'var(--red)'); return; }
+    showStatus('⏳ Sende…', 'var(--text2)');
+    const payload = {
+      event: 'board.test',
+      timestamp: new Date().toISOString(),
+      source: 'Infinite Canvas v0.24',
+      data: InteropBridge.exportToFormat ? JSON.parse(InteropBridge.exportToFormat('json')) : expD()
+    };
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        mode: 'cors'
+      });
+      if (res.ok) {
+        showStatus(`✅ Erfolgreich (HTTP ${res.status})`, 'var(--green)');
+        toast('🚀 Webhook gesendet');
+      } else {
+        showStatus(`⚠️ HTTP ${res.status} – Endpunkt erreicht, aber Antwort ist Fehler`, '#FF9F0A');
+      }
+    } catch (e) {
+      // CORS-Fehler oder kein Netz
+      showStatus(`❌ ${e.message} (oft CORS-blockiert)`, 'var(--red)');
+    }
+  };
+})();
 
 // API Generator
 document.getElementById('btn-generate-api').onclick = () => {
@@ -2053,19 +2479,35 @@ const P2PShare = {
     toast(`📦 ${data.nodes.length} Node(s) im Share Dock`);
   },
   
-  // Erstellt einen Share-Link (simuliert - in Zukunft mit WebRTC)
+  // Erstellt einen Share-Link mit Größen-Check
   generateLink() {
     if (!this.currentData) {
       this.updateStatus('❌ Zuerst Nodes ablegen', true);
       return;
     }
-    
+
     const code = document.getElementById('share-code-display').textContent;
     const encoded = btoa(encodeURIComponent(code));
-    const shareUrl = `${window.location.origin}${window.location.pathname}?share=${encoded}`;
-    
+    const baseUrl = `${window.location.origin}${window.location.pathname}`;
+    const shareUrl = `${baseUrl}?share=${encoded}`;
+
+    // FIX S3: URL-Limit-Check (sicher 2000, viele Mailer kürzen bei 1800)
+    const URL_LIMIT = 1800;
+    if (shareUrl.length > URL_LIMIT) {
+      const sizeKB = Math.round(shareUrl.length / 1024 * 10) / 10;
+      this.updateStatus(`⚠️ Zu groß für URL (${sizeKB} KB > ${URL_LIMIT/1024} KB). Kopiere Code stattdessen.`, true);
+      // Fallback: Code in Zwischenablage statt URL
+      navigator.clipboard.writeText(code).then(() => {
+        toast(`📋 Code kopiert (${sizeKB} KB) — Empfänger fügt ihn im Share-Dock ein`);
+      }).catch(() => {
+        toast('❌ Auch Code-Kopieren fehlgeschlagen — Strg+C auf dem angezeigten Code');
+      });
+      return;
+    }
+
     navigator.clipboard.writeText(shareUrl).then(() => {
-      this.updateStatus('🔗 Link in Zwischenablage kopiert!');
+      const sizeKB = Math.round(shareUrl.length / 1024 * 10) / 10;
+      this.updateStatus(`🔗 Link kopiert (${sizeKB} KB)`);
       toast('📋 Share-Link kopiert!');
     }).catch(err => {
       this.updateStatus('❌ Link-Erstellung fehlgeschlagen', true);
@@ -2093,53 +2535,75 @@ const P2PShare = {
     try {
       const decoded = decodeURIComponent(atob(encodedData));
       const parsed = JSON.parse(decoded);
-      
+
       if (parsed.type !== 'board-share' || !parsed.data) {
         throw new Error('Ungültiges Share-Format');
       }
-      
+
       const sharedData = parsed.data;
-      
-      // Nodes im sichtbaren Bereich platzieren
-      const viewportCenter = {
-        x: (-vx + canvas.width / 2) / vs,
-        y: (-vy + canvas.height / 2) / vs
-      };
-      
-      // Offset berechnen, um Nodes gruppiert zu platzieren
-      let minX = Infinity, minY = Infinity;
-      sharedData.nodes.forEach(n => {
-        if (n.x < minX) minX = n.x;
-        if (n.y < minY) minY = n.y;
-      });
-      
-      const offsetX = viewportCenter.x - minX;
-      const offsetY = viewportCenter.y - minY;
-      
-      // Nodes hinzufügen
-      sharedData.nodes.forEach(n => {
-        n.x += offsetX;
-        n.y += offsetY;
-        n.id = Date.now() + Math.random().toString(36).substr(2, 9);
-        nodes.push(n);
-      });
-      
-      // Connections hinzufügen (IDs anpassen)
-      if (sharedData.connections) {
-        sharedData.connections.forEach(c => {
-          conns.push({
-            from: c.from,
-            to: c.to,
-            label: c.label || ''
-          });
-        });
+      if (!sharedData.nodes || !sharedData.nodes.length) {
+        throw new Error('Keine Nodes im Share');
       }
-      
-      saveState();
-      render();
-      renderMinimap();
-      updateCounts();
-      
+
+      // Viewport-Zentrum in Welt-Koordinaten
+      const cssW = canvas.width / (window.devicePixelRatio || 1);
+      const cssH = canvas.height / (window.devicePixelRatio || 1);
+      const viewportCenter = {
+        x: (cssW / 2 - vx) / vs,
+        y: (cssH / 2 - vy) / vs
+      };
+
+      // Bounding-Box der geteilten Nodes
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      sharedData.nodes.forEach(n => {
+        minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+        maxX = Math.max(maxX, n.x + (n.width || 0));
+        maxY = Math.max(maxY, n.y + (n.height || 0));
+      });
+      const offsetX = viewportCenter.x - (minX + maxX) / 2;
+      const offsetY = viewportCenter.y - (minY + maxY) / 2;
+
+      pH();
+      // FIX S2: ID-Mapping aufbauen, damit Connections nicht verloren gehen
+      const idMap = {};
+      sharedData.nodes.forEach(n => {
+        const newId = 'n' + (++nc);
+        idMap[n.id] = newId;
+        // Vollständigen Node bauen — Defaults via mN() für ungültige Felder
+        const base = mN(n.type || 'text', n.text || '', (n.x || 0) + offsetX, (n.y || 0) + offsetY);
+        const merged = Object.assign(base, n, {
+          id: newId,
+          x: (n.x || 0) + offsetX,
+          y: (n.y || 0) + offsetY,
+          isSelected: false
+        });
+        nodes.push(merged);
+      });
+
+      // Connections mit gemappten IDs übernehmen
+      const sharedConns = sharedData.connections || sharedData.conns || sharedData.edges || [];
+      sharedConns.forEach(c => {
+        const fromId = idMap[c.from || c.fromNode];
+        const toId = idMap[c.to || c.toNode];
+        if (fromId && toId) {
+          conns.push({
+            id: 'c' + Date.now() + Math.random().toString(36).slice(2, 6),
+            from: fromId,
+            to: toId,
+            fromSide: c.fromSide || 'right',
+            toSide: c.toSide || 'left',
+            label: c.label || '',
+            style: c.style || 'solid',
+            color: c.color || ''
+          });
+        }
+      });
+
+      // FIX S1: korrekte Funktionsnamen statt saveState/renderMinimap/updateCounts
+      aS();
+      uSB();
+      sR();
+
       toast(`✅ ${sharedData.nodes.length} Node(s) importiert!`);
       return true;
     } catch (error) {
@@ -2260,6 +2724,12 @@ const LiveRoom = {
   isHost: false,
   peers: [],
   syncEnabled: true,
+  // FIX S7: Remote-Cursor-Tracking
+  remoteCursors: {},        // peerId → { x, y, color, name, t }
+  myColor: null,
+  myName: null,
+  _cursorSendT: 0,
+  _cursorThrottleMs: 60,    // ~16 Hz
   
   // Initialisiert PeerJS
   init() {
@@ -2364,9 +2834,9 @@ const LiveRoom = {
       });
       
       conn.on('data', (data) => {
-        this.handleData(data);
+        this.handleData(data, conn);
       });
-      
+
     } catch (err) {
       console.error('LiveRoom Join Error:', err);
       this.updateRoomStatus('error', 'Beitritt fehlgeschlagen');
@@ -2389,19 +2859,20 @@ const LiveRoom = {
     });
     
     conn.on('data', (data) => {
-      this.handleData(data);
+      // FIX S4: conn-Referenz mitgeben, damit Host gezielt antworten kann
+      this.handleData(data, conn);
     });
-    
+
     conn.on('close', () => {
       this.peers = this.peers.filter(p => p !== conn);
       this.updatePeerCount(this.peers.length);
     });
   },
-  
+
   // Verarbeitet eingehende Daten
-  handleData(data) {
+  handleData(data, conn) {
     console.log('LiveRoom: Daten erhalten:', data.type);
-    
+
     switch(data.type) {
       case 'state-update':
         // Board-State empfangen und anwenden
@@ -2466,15 +2937,74 @@ const LiveRoom = {
         break;
         
       case 'request-state':
-        // State-Anfrage beantworten (nur als Host)
-        if (this.isHost) {
-          this.sendToPeer(data._conn, {
+        // FIX S4: Antwort gezielt an anfragenden Client (conn aus handleData-Parameter)
+        if (this.isHost && conn) {
+          this.sendToPeer(conn, {
             type: 'state-update',
             data: this.getBoardState()
           });
         }
         break;
+
+      // FIX S7: Cursor-Position empfangen + an andere Peers weiterleiten (Host = Relay)
+      case 'cursor':
+        if (data.peerId && typeof data.x === 'number' && typeof data.y === 'number') {
+          this.remoteCursors[data.peerId] = {
+            x: data.x, y: data.y,
+            color: data.color || '#007AFF',
+            name: data.name || data.peerId.slice(0, 6),
+            t: performance.now()
+          };
+          // Host leitet an alle anderen Peers weiter
+          if (this.isHost && conn) {
+            this.peers.forEach(p => { if (p !== conn && p.open) p.send(data); });
+          }
+          sR();
+        }
+        break;
+
+      case 'cursor-leave':
+        if (data.peerId) {
+          delete this.remoteCursors[data.peerId];
+          if (this.isHost && conn) {
+            this.peers.forEach(p => { if (p !== conn && p.open) p.send(data); });
+          }
+          sR();
+        }
+        break;
     }
+  },
+
+  // FIX S7: Eigene Cursor-Position senden (throttled)
+  sendCursor(worldX, worldY) {
+    if (!this.peer || !this.peer.id) return;
+    if (!this.isHost && !this.conn) return;
+    if (this.isHost && this.peers.length === 0) return;
+    const now = performance.now();
+    if (now - this._cursorSendT < this._cursorThrottleMs) return;
+    this._cursorSendT = now;
+    if (!this.myColor) this.myColor = `hsl(${Math.floor(Math.random()*360)}, 70%, 55%)`;
+    if (!this.myName)  this.myName  = (this.peer.id || 'me').slice(0, 6);
+    this.send({
+      type: 'cursor',
+      peerId: this.peer.id,
+      x: worldX, y: worldY,
+      color: this.myColor,
+      name: this.myName
+    });
+  },
+
+  // Aufräumen stale Cursor (> 5 s ohne Update)
+  cleanupCursors() {
+    const now = performance.now();
+    let changed = false;
+    Object.keys(this.remoteCursors).forEach(id => {
+      if (now - this.remoteCursors[id].t > 5000) {
+        delete this.remoteCursors[id];
+        changed = true;
+      }
+    });
+    if (changed) sR();
   },
   
   // Sendet Daten an alle Peers
@@ -2508,32 +3038,42 @@ const LiveRoom = {
     };
   },
   
-  // Wendet Board-State an
+  // Wendet Board-State an (ohne Echo zurück an Peers)
   applyBoardState(state) {
     if (!state || !state.nodes) return;
-    
+
     nodes = state.nodes.map(n => ({ ...n }));
     conns = state.conns ? state.conns.map(c => ({ ...c })) : [];
-    vx = state.vx || 0;
-    vy = state.vy || 0;
-    vs = state.vs || 1;
+    // viewport NICHT überschreiben — jeder Peer hat seinen eigenen Zoom/Pan
+    // (vx/vy/vs nur beim initialen Join sinnvoll, aber das stört aktive Nutzer)
 
-    aS();
-    render();
+    // FIX S6: Echo-Loop verhindern — kurzzeitig syncEnabled aus, lokal speichern, wieder an
+    const wasSyncEnabled = this.syncEnabled;
+    this.syncEnabled = false;
+    try {
+      StorageManager.set('ic_v3', JSON.stringify(expD()));
+      markSaved(Date.now(), 'Sync empfangen');
+    } catch(_){}
+    sR();
     scheduleMM();
     uSB();
-    
+    this.syncEnabled = wasSyncEnabled;
+
     toast('📡 Board-State synchronisiert');
   },
   
   // Verlässt den Raum
   leaveRoom() {
+    // FIX S7: anderen Peers signalisieren, dass mein Cursor weg ist
+    try { this.send({ type: 'cursor-leave', peerId: this.peer && this.peer.id }); } catch(_){}
+    this.remoteCursors = {};
     this.disconnect();
     document.getElementById('room-info').style.display = 'none';
     document.getElementById('room-status').style.display = 'none';
     document.getElementById('room-id-input').value = '';
     this.roomId = null;
     this.isHost = false;
+    sR();
     toast('🚪 Raum verlassen');
   },
   
@@ -2651,6 +3191,55 @@ document.getElementById('room-leave-btn').onclick = () => {
 document.getElementById('room-copy-id').onclick = () => {
   LiveRoom.copyRoomId();
 };
+
+// FIX S8: QR-Code anzeigen für Mobile-Beitritt
+document.getElementById('room-show-qr').onclick = () => {
+  const container = document.getElementById('room-qr-container');
+  const target = document.getElementById('room-qr-canvas');
+  if (!LiveRoom.roomId) { toast('Erst Raum erstellen'); return; }
+  if (container.style.display === 'block') {
+    container.style.display = 'none';
+    return;
+  }
+  if (typeof qrcode === 'undefined') {
+    toast('QR-Code-Bibliothek nicht geladen');
+    return;
+  }
+  try {
+    // URL mit Auto-Join-Hash, sodass Scan direkt verbindet
+    const joinUrl = `${window.location.origin}${window.location.pathname}#room=${encodeURIComponent(LiveRoom.roomId)}`;
+    const qr = qrcode(0, 'M'); // Type 0 = auto, Error correction Medium
+    qr.addData(joinUrl);
+    qr.make();
+    // 4px cell size, 2 module margin
+    target.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+    const svg = target.querySelector('svg');
+    if (svg) { svg.style.maxWidth = '180px'; svg.style.width = '100%'; svg.style.height = 'auto'; }
+    container.style.display = 'block';
+  } catch (e) {
+    console.error('QR-Code-Generierung fehlgeschlagen', e);
+    toast('❌ QR-Code-Fehler');
+  }
+};
+
+// Auto-Join via Hash beim Page-Load (vom QR-Scan)
+window.addEventListener('load', () => {
+  const m = (window.location.hash || '').match(/^#room=(.+)$/);
+  if (!m) return;
+  const roomId = decodeURIComponent(m[1]);
+  setTimeout(() => {
+    // Share-Dock + Room-Tab öffnen
+    P2PShare.open();
+    document.getElementById('tab-room').click();
+    if (!LiveRoom.peer) LiveRoom.init();
+    setTimeout(() => {
+      document.getElementById('room-id-input').value = roomId;
+      LiveRoom.joinRoom(roomId);
+      // Hash entfernen (verhindert Re-Join bei Refresh)
+      history.replaceState({}, document.title, window.location.pathname);
+    }, 400);
+  }, 800);
+});
 
 // ===== END TOFEESHARE LIVE ROOM MODULE =====
 
@@ -2797,28 +3386,138 @@ const PredictiveWorkflow = {
   },
   
   saveMacro(pattern) {
+    // FIX A7: Konkretes Recipe statt nur Pattern-String — basierend auf letzten 3 Actions
+    const recent = this.actionHistory.slice(-3);
+    const recipe = recent.map(a => ({
+      type: a.type,
+      data: a.data || {}
+    }));
+    // Default-Name aus dem Pattern
+    const niceName = pattern.replace(/createNode/g, 'Node').replace(/connectNodes/g, '→').replace(/->/g, ' ');
     const macro = {
       id: `macro_${Date.now()}`,
       pattern,
-      actions: pattern.split('->'),
-      created: Date.now()
+      name: niceName,
+      recipe,
+      created: Date.now(),
+      uses: 0
     };
-    
     this.macros.push(macro);
     this.saveToStorage();
-    
-    // Show confirmation
-    this.showSuggestion(`✅ Macro gespeichert! Du kannst es jetzt über die Toolbar nutzen.`, () => {});
+    this.showSuggestion(`✅ Macro „${niceName}" gespeichert. Über die Toolbar (🧠) ausführbar.`, () => {});
   },
-  
+
+  // FIX A7: Macro ausführen — interpretiert das Recipe
   executeMacro(macroId) {
     const macro = this.macros.find(m => m.id === macroId);
-    if (!macro) return;
-    
-    console.log('🔄 Executing macro:', macro.pattern);
-    // Hier würde die tatsächliche Ausführung der Aktionen erfolgen
-    // Für jetzt nur Demo
-    alert(`Macro würde ausführen: ${macro.pattern}`);
+    if (!macro || !macro.recipe || !macro.recipe.length) {
+      toast('⚠️ Macro hat kein Recipe');
+      return;
+    }
+    // Auto-Save & History während der Replay-Phase nicht hetzen
+    const cssW = canvas.width / (window.devicePixelRatio || 1);
+    const cssH = canvas.height / (window.devicePixelRatio || 1);
+    const baseX = (cssW / 2 - vx) / vs - 60;
+    const baseY = (cssH / 2 - vy) / vs - 40;
+    const created = [];
+    let cx = baseX, cy = baseY;
+
+    macro.recipe.forEach((step, i) => {
+      if (step.type === 'createNode') {
+        const t = (step.data && step.data.type) || 'text';
+        const n = addN(t, cx, cy);
+        created.push(n);
+        cx += 280; // nächster Slot daneben
+      } else if (step.type === 'connectNodes' && created.length >= 2) {
+        const a = created[created.length - 2], b = created[created.length - 1];
+        const { fromSide, toSide } = bSides(a, b);
+        conns.push({
+          id: 'c' + Date.now() + i,
+          from: a.id, to: b.id,
+          fromSide, toSide,
+          label: '', style: 'solid', color: ''
+        });
+        pH(); aS(); uSB(); sR();
+        emit('connectionCreated', { from: a.id, to: b.id });
+      } else if (step.type === 'deleteNode' && created.length) {
+        const target = created.pop();
+        if (target) delN(target);
+      }
+    });
+
+    macro.uses = (macro.uses || 0) + 1;
+    this.saveToStorage();
+    toast(`🧠 Macro „${macro.name || macro.pattern}" ausgeführt`);
+    if (created.length) {
+      clrS();
+      created.forEach(n => addS(n));
+      sR();
+    }
+  },
+
+  // FIX A7: UI-Panel für Macros
+  openMacroPanel() {
+    let panel = document.getElementById('macro-panel');
+    if (panel) { panel.remove(); return; }
+    panel = document.createElement('div');
+    panel.id = 'macro-panel';
+    panel.style.cssText = `
+      position: fixed; top: 60px; right: 16px; z-index: 9960;
+      width: min(360px, 92vw); max-height: 70vh; overflow-y: auto;
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 12px; box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(40px) saturate(180%);
+      padding: 14px;
+    `;
+    const stats = this.getStats();
+    let html = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-weight:600;font-size:13px;color:var(--text);">🧠 Macros</div>
+        <button id="macro-close" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;">✕</button>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:12px;">${stats.totalActions} Aktionen · ${stats.patternsDetected} Muster · ${stats.macrosSaved} Macros</div>
+    `;
+    if (!this.macros.length) {
+      html += `<div style="text-align:center;padding:24px 12px;color:var(--text3);font-size:12px;line-height:1.6;">
+        Noch keine Macros.<br>
+        Wiederhole eine Aktionsfolge (z.B. Node + Node + Connect) 3× —<br>
+        ich schlage sie dir dann als Macro vor.
+      </div>`;
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+      this.macros.forEach((m, idx) => {
+        const name = escapeHtml(m.name || m.pattern || `Macro ${idx+1}`);
+        html += `
+          <div style="padding:10px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--glass-border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-weight:600;font-size:12px;color:var(--text);">${name}</div>
+              <div style="font-size:9px;color:var(--text3);">${m.uses || 0}× genutzt</div>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:8px;font-family:'SF Mono',Menlo,monospace;">${escapeHtml(m.pattern || '')}</div>
+            <div style="display:flex;gap:6px;">
+              <button class="macro-run-btn" data-id="${m.id}" style="flex:1;padding:6px;border-radius:5px;border:none;background:var(--accent);color:#fff;font-size:11px;cursor:pointer;font-family:var(--font);font-weight:500;">▶ Ausführen</button>
+              <button class="macro-del-btn" data-id="${m.id}" style="padding:6px 10px;border-radius:5px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:11px;cursor:pointer;font-family:var(--font);">🗑</button>
+            </div>
+          </div>`;
+      });
+      html += '</div>';
+    }
+    panel.innerHTML = html;
+    document.body.appendChild(panel);
+
+    panel.querySelector('#macro-close').onclick = () => panel.remove();
+    panel.querySelectorAll('.macro-run-btn').forEach(btn => {
+      btn.onclick = () => { this.executeMacro(btn.dataset.id); };
+    });
+    panel.querySelectorAll('.macro-del-btn').forEach(btn => {
+      btn.onclick = () => {
+        if (!confirm('Macro wirklich löschen?')) return;
+        this.macros = this.macros.filter(m => m.id !== btn.dataset.id);
+        this.saveToStorage();
+        panel.remove();
+        this.openMacroPanel();
+      };
+    });
   },
   
   saveToStorage() {
@@ -2860,6 +3559,11 @@ const PredictiveWorkflow = {
 setTimeout(() => {
   PredictiveWorkflow.init();
 }, 1000);
+
+// FIX S7: Stale-Cursor-Cleanup für LiveRoom (alle 2 s)
+setInterval(() => {
+  if (typeof LiveRoom !== 'undefined' && LiveRoom.cleanupCursors) LiveRoom.cleanupCursors();
+}, 2000);
 
 // Add button to toolbar for macro access (optional)
 // This would be added to the toolbar HTML in a real implementation
