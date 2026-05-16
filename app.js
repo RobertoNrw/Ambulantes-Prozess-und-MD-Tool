@@ -145,7 +145,21 @@ function uSB(){
 }
 
 let _ast=null;
-function aS(){setSaveIndicator('Speichert…','#FF9F0A');clearTimeout(_ast);_ast=setTimeout(async()=>{try{StorageManager.set('ic_v3',JSON.stringify(expD()));markSaved(Date.now(),'Lokal gespeichert');await saveToBackend();}catch(e){setSaveIndicator('Speicherfehler','#FF453A');}},400);}
+function aS(){
+  setSaveIndicator('Speichert…','#FF9F0A');
+  clearTimeout(_ast);
+  _ast=setTimeout(async()=>{
+    try{
+      StorageManager.set('ic_v3',JSON.stringify(expD()));
+      markSaved(Date.now(),'Lokal gespeichert');
+      await saveToBackend();
+      // FIX S6: LiveRoom-Sync — wenn aktiv, State an Peers broadcasten
+      if (typeof LiveRoom !== 'undefined' && LiveRoom.peer && LiveRoom.syncEnabled && (LiveRoom.isHost ? LiveRoom.peers.length > 0 : LiveRoom.conn)) {
+        try { LiveRoom.send({ type: 'state-update', data: LiveRoom.getBoardState() }); } catch(_){}
+      }
+    }catch(e){setSaveIndicator('Speicherfehler','#FF453A');}
+  },400);
+}
 function expD(){return{nodes:nodes.map(cN),edges:conns.map(c=>({id:c.id,fromNode:c.from,toNode:c.to,fromSide:c.fromSide,toSide:c.toSide,label:c.label||'',style:c.style||'solid',color:c.color||''}))};}
 function impD(data){nodes=[];conns=[];nc=0;clrS();
 (data.nodes||[]).forEach(nd=>{const n={id:nd.id,type:nd.type||'text',text:nd.text||'Node',x:nd.x!=null?nd.x:100,y:nd.y!=null?nd.y:100,width:nd.width||250,height:nd.height||120,scrollY:0,isSelected:false,locked:nd.locked||false,bg:nd.bg||nd.backgroundColor||C('#2c2c2e','#fff'),textColor:nd.textColor||C('#f5f5f7','#1c1c1e'),border:nd.border||nd.borderColor||C('#48484a','#d1d1d6'),typeData:nd.typeData||(nd.type==='checklist'?{items:[]}:(nd.type==='table'?{headers:['Spalte 1','Spalte 2'],rows:[['','']]}:(nd.type==='link'?{url:'https://',icon:''}:{})))};const num=parseInt(n.id.replace(/\D/g,''));if(!isNaN(num)&&num>nc)nc=num;nodes.push(n);});
@@ -176,10 +190,12 @@ case'hexagon':return{...b,text:text||'Modul',width:180,height:160,bg:C('#2a1e3a'
 case'image':return{...b,text:text||'Bild',width:300,height:200,bg:'transparent',textColor:'transparent',border:C('rgba(255,255,255,0.2)','rgba(0,0,0,0.2)'),typeData:{src:'', url:''}};
 default:return{...b,text:text||'New Node',width:250,height:120,bg:C('#2c2c2e','#fff'),textColor:C('#f5f5f7','#1c1c1e'),border:C('#48484a','#d1d1d6'),typeData:{}};}}
 function cN(n){const{_rh,_sb,_ch,_ms,_ca,isEditing,...r}=n;return r;}
-function addN(type,x,y,text){const n=mN(type,text,snV(x!=null&&x!==''?+x:100),snV(y!=null&&y!==''?+y:100));nodes.push(n);pH();aS();uSB();sR();return n;}
-function delN(n){nodes=nodes.filter(x=>x!==n);conns=conns.filter(c=>c.from!==n.id&&c.to!==n.id);selN=selN.filter(s=>s!==n);if(imgCache[n.id]) delete imgCache[n.id];  // FIX 1: Cleanup imgCache to prevent memory leak
-pH();aS();uSB();sR();}
-function delC(c){conns=conns.filter(x=>x!==c);if(selC===c)selC=null;pH();aS();uSB();sR();}
+// FIX A6: Zentraler Event-Dispatcher für PredictiveWorkflow & LiveRoom-Hooks
+function emit(name,detail){try{document.dispatchEvent(new CustomEvent(name,{detail:detail||{}}));}catch(_){}}
+function addN(type,x,y,text){const n=mN(type,text,snV(x!=null&&x!==''?+x:100),snV(y!=null&&y!==''?+y:100));nodes.push(n);pH();aS();uSB();sR();emit('nodeCreated',{type:n.type,id:n.id});return n;}
+function delN(n){const id=n.id;nodes=nodes.filter(x=>x!==n);conns=conns.filter(c=>c.from!==n.id&&c.to!==n.id);selN=selN.filter(s=>s!==n);if(imgCache[n.id]) delete imgCache[n.id];
+pH();aS();uSB();sR();emit('nodeDeleted',{id});}
+function delC(c){const id=c.id;conns=conns.filter(x=>x!==c);if(selC===c)selC=null;pH();aS();uSB();sR();emit('connectionDeleted',{id});}
 
 function clrS(){nodes.forEach(n=>n.isSelected=false);selN=[];selC=null;}
 function selOne(n){clrS();n.isSelected=true;selN=[n];}
@@ -672,10 +688,10 @@ document.addEventListener('mouseup',e=>{if(window.PointerEvent)return;
 if(isRz){isRz=false;if(rzN){pH();aS();}rzN=null;rzH=null;sR();return;}
 if(isSB){isSB=false;sbN=null;sR();return;}
 if(isConn&&cStart){const r=canvas.getBoundingClientRect();const{x:cx,y:cy}=s2c(e.clientX-r.left,e.clientY-r.top);const target=nAt(cx,cy);
-if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();}
+if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();emit('connectionCreated',{from:cStart.id,to:target.id});}
 isConn=false;cStart=null;cStartPt=null;setCursor('default');}
 if(isSel){if(sRect&&(sRect.w>4||sRect.h>4)){const sel=nInR(sRect.x,sRect.y,sRect.w,sRect.h);if(e.ctrlKey||e.metaKey||e.shiftKey)sel.forEach(n=>addS(n));else{clrS();sel.forEach(n=>addS(n));}}isSel=false;sRect=null;}
-if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();}
+if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();emit('nodeMoved',{count:selN.length});}
 // P2P Share: Drag-Daten nach erfolgreichem Drag zurücksetzen
 isDrag=false;isND=false;isPan=false;dNode=null;moved=false;sR();});
 
@@ -728,10 +744,10 @@ canvas.addEventListener('pointerup',e=>{if(!window.PointerEvent||activePointerId
 if(isRz){isRz=false;if(rzN){pH();aS();}rzN=null;rzH=null;activePointerId=null;sR();return;}
 if(isSB){isSB=false;sbN=null;activePointerId=null;sR();return;}
 if(isConn&&cStart){const{mx,my}=getLocalPoint(e);const{x:cx,y:cy}=s2c(mx,my);const target=nAt(cx,cy);
-if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();}
+if(target&&target!==cStart){const tp=cpAt(target,cx,cy);const{fromSide,toSide}=bSides(cStart,target);conns.push({id:'c'+Date.now(),from:cStart.id,to:target.id,fromSide:cStartPt?.side||fromSide,toSide:tp?.side||toSide,label:'',style:'solid',color:''});pH();aS();uSB();emit('connectionCreated',{from:cStart.id,to:target.id});}
 isConn=false;cStart=null;cStartPt=null;setCursor('default');}
 if(isSel){if(sRect&&(sRect.w>4||sRect.h>4)){const sel=nInR(sRect.x,sRect.y,sRect.w,sRect.h);if(e.ctrlKey||e.metaKey||e.shiftKey)sel.forEach(n=>addS(n));else{clrS();sel.forEach(n=>addS(n));}}isSel=false;sRect=null;}
-if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();}
+if(dNode&&!moved)selOne(dNode);if(isND&&moved){pH();aS();emit('nodeMoved',{count:selN.length});}
 isDrag=false;isND=false;isPan=false;dNode=null;moved=false;activePointerId=null;try{canvas.releasePointerCapture(e.pointerId);}catch(_){ }sR();});
 
 canvas.addEventListener('pointercancel',resetInteractionState);
@@ -1372,12 +1388,72 @@ const AIOrganizer = {
     }
   },
   
-  // Aktionen anwenden
+  // FIX A1: Cluster werden räumlich gruppiert + optional in Group-Container verpackt
   applyClustering(clusters) {
-    pH(); // History Punkt
+    if (!clusters || !clusters.length) { toast('Keine Cluster'); return; }
+    pH();
+    const pad = 60, gap = 24, clusterGap = 180;
+    // Aktuelle Position des "globalen Schwerpunkts" als Startpunkt
+    let sx = nodes.reduce((s,n)=>s+n.x,0)/Math.max(1,nodes.length);
+    let sy = nodes.reduce((s,n)=>s+n.y,0)/Math.max(1,nodes.length);
+    let cursorX = sx - 600, cursorY = sy - 400;
+    let rowMaxH = 0;
+
+    clusters.forEach((cluster, ci) => {
+      // Nodes nach Verbindungsgrad sortieren (zentrale Nodes oben links)
+      const deg = {};
+      cluster.forEach(n => { deg[n.id] = conns.filter(c => c.from === n.id || c.to === n.id).length; });
+      const sorted = cluster.slice().sort((a,b) => (deg[b.id]||0) - (deg[a.id]||0));
+
+      const cols = Math.ceil(Math.sqrt(sorted.length));
+      const maxW = Math.max(...sorted.map(n => n.width));
+      const maxH = Math.max(...sorted.map(n => n.height));
+      const cellW = maxW + gap, cellH = maxH + gap;
+      const rows = Math.ceil(sorted.length / cols);
+      const blockW = cols * cellW + pad * 2;
+      const blockH = rows * cellH + pad * 2;
+
+      // Zeilenumbruch wenn nicht mehr in den "Streifen" passt
+      if (cursorX + blockW > sx + 1200) {
+        cursorX = sx - 600;
+        cursorY += rowMaxH + clusterGap;
+        rowMaxH = 0;
+      }
+
+      // Nodes neu positionieren
+      sorted.forEach((n, i) => {
+        if (n.locked) return;
+        const col = i % cols, row = Math.floor(i / cols);
+        n.x = snV(cursorX + pad + col * cellW);
+        n.y = snV(cursorY + pad + row * cellH);
+      });
+
+      // Group-Container um Cluster legen
+      const groupId = 'n' + (++nc);
+      nodes.unshift({
+        id: groupId,
+        type: 'group',
+        text: `Cluster ${ci + 1}`,
+        x: snV(cursorX),
+        y: snV(cursorY),
+        width: blockW,
+        height: blockH,
+        scrollY: 0,
+        isSelected: false,
+        locked: false,
+        bg: C('rgba(0,122,255,0.04)','rgba(0,122,255,0.04)'),
+        textColor: C('rgba(0,122,255,0.85)','rgba(0,85,204,0.85)'),
+        border: C('rgba(0,122,255,0.35)','rgba(0,122,255,0.35)'),
+        typeData: {}
+      });
+
+      cursorX += blockW + clusterGap;
+      rowMaxH = Math.max(rowMaxH, blockH);
+    });
+
+    aS(); uSB(); sR();
     toast(`📦 ${clusters.length} Cluster organisiert`);
     $aiPicker.style.display = 'none';
-    aS();
   },
   
   applyAutoLayout(positions) {
@@ -1583,45 +1659,67 @@ const InteropBridge = {
           }
         });
       } else if (format === 'mermaid') {
-        // Mermaid Parser
+        // FIX B3: Robusterer Mermaid-Parser mit Shape-Erkennung & Labels
         importedData = { nodes: [], connections: [] };
         const nodeMap = {};
         let nodeIndex = 0;
-        
-        const nodeLines = inputData.match(/(\w+)\[(.+?)\]/g) || [];
-        nodeLines.forEach(line => {
-          const match = line.match(/(\w+)\[(.+?)\]/);
-          if (match) {
-            const nodeId = `imp-${Date.now()}-${nodeIndex++}`;
-            nodeMap[match[1]] = nodeId;
-            importedData.nodes.push({
-              id: nodeId,
-              text: match[2],
-              type: 'idea',
-              x: Math.random() * 800,
-              y: Math.random() * 600,
-              color: '#ffffff'
-            });
+        // Shape-Klammern → Node-Typ mapping
+        // [text]=text, (text)=ellipse, {text}=diamond, [[text]]=hexagon, ((text))=link
+        // ID darf Buchstaben/Ziffern/Underscore/Bindestrich enthalten
+        const shapePatterns = [
+          { rx: /\b([A-Za-z0-9_-]+)\(\(([^)]+)\)\)/g, type: 'link' },
+          { rx: /\b([A-Za-z0-9_-]+)\[\[([^\]]+)\]\]/g, type: 'hexagon' },
+          { rx: /\b([A-Za-z0-9_-]+)\{([^}]+)\}/g,     type: 'diamond' },
+          { rx: /\b([A-Za-z0-9_-]+)\(([^)]+)\)/g,     type: 'ellipse' },
+          { rx: /\b([A-Za-z0-9_-]+)\[([^\]]+)\]/g,    type: 'text' },
+        ];
+        const addNodeIfNew = (origId, text, type) => {
+          if (nodeMap[origId]) return;
+          const newId = `imp-${Date.now()}-${nodeIndex++}`;
+          nodeMap[origId] = newId;
+          importedData.nodes.push({ id: newId, text: text.trim(), type });
+        };
+        shapePatterns.forEach(({rx, type}) => {
+          let m;
+          while ((m = rx.exec(inputData)) !== null) {
+            addNodeIfNew(m[1], m[2], type);
           }
         });
-        
-        const connLines = inputData.match(/(\w+)\s+-->.*?\s+(\w+)/g) || [];
-        connLines.forEach(line => {
-          const parts = line.split('-->');
-          if (parts.length >= 2) {
-            const fromId = parts[0].trim();
-            const toPart = parts[1].trim();
-            const toId = toPart.match(/^\|.*?\|\s*(\w+)/)?.[1] || toPart.match(/(\w+)$/)?.[1];
-            
-            if (fromId && toId && nodeMap[fromId] && nodeMap[toId]) {
-              importedData.connections.push({
-                from: nodeMap[fromId],
-                to: nodeMap[toId],
-                label: ''
-              });
-            }
-          }
-        });
+
+        // Connections: A --> B, A -->|label| B, A --- B, A -.-> B, A ==> B
+        // Erlaubt auch IDs mit Shape-Suffix: A[Foo] --> B[Bar] — Shapes wurden oben schon erfasst
+        const connRx = /([A-Za-z0-9_-]+)(?:\[[^\]]+\]|\([^)]+\)|\{[^}]+\}|\[\[[^\]]+\]\]|\(\([^)]+\)\))?\s*(?:--|==|-\.|-\.-)+>?\s*(?:\|([^|]+)\|)?\s*([A-Za-z0-9_-]+)/g;
+        let cm;
+        while ((cm = connRx.exec(inputData)) !== null) {
+          const from = cm[1], label = (cm[2] || '').trim(), to = cm[3];
+          // Wenn IDs in keinem Shape-Block auftauchten, als 'text' anlegen
+          if (!nodeMap[from]) addNodeIfNew(from, from, 'text');
+          if (!nodeMap[to])   addNodeIfNew(to,   to,   'text');
+          importedData.connections.push({
+            from: nodeMap[from],
+            to: nodeMap[to],
+            label: label
+          });
+        }
+      } else if (format === 'csv') {
+        // FIX B4-light: einfacher CSV-Import (Header-Zeile: ID,Text,Type,X,Y)
+        importedData = { nodes: [], connections: [] };
+        const lines = inputData.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) throw new Error('CSV zu kurz (Header + Daten erwartet)');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g,''));
+        const idx = { id: headers.indexOf('id'), text: headers.indexOf('text'), type: headers.indexOf('type'), x: headers.indexOf('x'), y: headers.indexOf('y') };
+        for (let i = 1; i < lines.length; i++) {
+          // Sehr einfacher CSV-Parser (unterstützt "..."-Quoting)
+          const cells = lines[i].match(/("([^"]|"")*"|[^,]+)/g) || [];
+          const clean = cells.map(c => c.replace(/^"|"$/g,'').replace(/""/g,'"'));
+          importedData.nodes.push({
+            id: idx.id   >= 0 ? clean[idx.id]   : `csv-${i}`,
+            text: idx.text >= 0 ? clean[idx.text] : '',
+            type: idx.type >= 0 ? clean[idx.type] : 'text',
+            x: idx.x !== -1 ? parseFloat(clean[idx.x]) : undefined,
+            y: idx.y !== -1 ? parseFloat(clean[idx.y]) : undefined,
+          });
+        }
       }
       
       if (importedData && importedData.nodes) {
@@ -1983,12 +2081,17 @@ document.getElementById('btn-import-clipboard').onclick = async () => {
     
     // Format automatisch erkennen
     let format = 'json';
-    if (content.trim().startsWith('graph')) {
+    const trimmed = content.trim();
+    if (/^graph\s+(TD|TB|BT|LR|RL)/i.test(trimmed) || /^flowchart\s+/i.test(trimmed)) {
       format = 'mermaid';
+    } else if (/^id\s*,/i.test(trimmed) || /^"?id"?\s*,/i.test(trimmed)) {
+      format = 'csv';
+    } else if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      format = 'json';
     } else if (content.includes('#') && content.includes('##')) {
       format = 'markdown';
     }
-    
+
     const result = await InteropBridge.importFromFormat(format, content);
     if (result.success) {
       $interopPicker.style.display = 'none';
@@ -2568,21 +2671,27 @@ const LiveRoom = {
     };
   },
   
-  // Wendet Board-State an
+  // Wendet Board-State an (ohne Echo zurück an Peers)
   applyBoardState(state) {
     if (!state || !state.nodes) return;
-    
+
     nodes = state.nodes.map(n => ({ ...n }));
     conns = state.conns ? state.conns.map(c => ({ ...c })) : [];
-    vx = state.vx || 0;
-    vy = state.vy || 0;
-    vs = state.vs || 1;
+    // viewport NICHT überschreiben — jeder Peer hat seinen eigenen Zoom/Pan
+    // (vx/vy/vs nur beim initialen Join sinnvoll, aber das stört aktive Nutzer)
 
-    aS();
-    render();
+    // FIX S6: Echo-Loop verhindern — kurzzeitig syncEnabled aus, lokal speichern, wieder an
+    const wasSyncEnabled = this.syncEnabled;
+    this.syncEnabled = false;
+    try {
+      StorageManager.set('ic_v3', JSON.stringify(expD()));
+      markSaved(Date.now(), 'Sync empfangen');
+    } catch(_){}
+    sR();
     scheduleMM();
     uSB();
-    
+    this.syncEnabled = wasSyncEnabled;
+
     toast('📡 Board-State synchronisiert');
   },
   
